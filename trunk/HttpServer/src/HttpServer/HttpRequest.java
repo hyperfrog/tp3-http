@@ -13,17 +13,17 @@ import java.util.regex.Matcher;
 
 public class HttpRequest
 {
-	public String header;
-	public String method;
-	public String protocol;
-	public String url;
-	public String pathName;
-	public Map<String, String> parameters;
-	public Map<String, String> fields;
+	private String header;
+	private String method;
+	private String protocol;
+	private String url;
+	private String pathName;
+	private Map<String, String> parameters;
+	private Map<String, String> fields;
 	
 	public HttpRequest(String header)
 	{
-		this.header = header;
+		this.header = header == null ? "" : header;
 		this.method = "";
 		this.protocol = "";
 		this.url = "";
@@ -98,16 +98,19 @@ public class HttpRequest
 				{
 					for(String p : tmpParam)
 					{
-						ArrayList<String> keys = split(p, "=");
-//						for (int i = 0; i <= 1; i++)
+						ArrayList<String> sides = split(p, "=");
+//						for (int i = 0; i < sides.size(); i++)
 //						{
-//							keys.set(i, unescape(keys.get(i)));
-//							if (!UTF8_is_ASCII(keys.get(i)) && UTF8_is_MultiByte(keys.get(i))) 
+//							sides.set(i, unescape(sides.get(i)));
+//							if (!UTF8_is_ASCII(sides.get(i)) && UTF8_is_MultiByte(sides.get(i))) 
 //							{
-//								keys.set(i, UTF8_to_Latin1(keys.get(i)));
+//								sides.set(i, UTF8_to_Latin1(sides.get(i)));
 //							}
 //						}
-						this.parameters.put(keys.get(0), keys.get(1));
+						if (sides.size() >= 2)
+						{
+							this.parameters.put(sides.get(0), sides.get(1));
+						}
 					}
 				}
 			}
@@ -116,5 +119,121 @@ public class HttpRequest
 		{
 			this.pathName = this.url;
 		}
+	}
+
+	/**
+	 * @param field
+	 * @param value
+	 */
+	public void setField(String field, String value)
+	{
+		this.fields.put(field, value);
+	}
+	
+	/**
+	 * @param field
+	 * @return
+	 */
+	public String getField(String field)
+	{
+		return this.fields.get(field);
+	}
+	
+	/**
+	 * @param param
+	 * @param value
+	 */
+	public void setParam(String param, String value)
+	{
+		this.fields.put(param, value);
+	}
+	
+	/**
+	 * @param param
+	 * @return
+	 */
+	public String getParam(String param)
+	{
+		return this.fields.get(param);
+	}
+	
+	/**
+	 * @return the header
+	 */
+	public String getHeader()
+	{
+		return header;
+	}
+
+	/**
+	 * @param header the header to set
+	 */
+	public void setHeader(String header)
+	{
+		this.header = header;
+	}
+
+	/**
+	 * @return the method
+	 */
+	public String getMethod()
+	{
+		return method;
+	}
+
+	/**
+	 * @param method the method to set
+	 */
+	public void setMethod(String method)
+	{
+		this.method = method;
+	}
+
+	/**
+	 * @return the protocol
+	 */
+	public String getProtocol()
+	{
+		return protocol;
+	}
+
+	/**
+	 * @param protocol the protocol to set
+	 */
+	public void setProtocol(String protocol)
+	{
+		this.protocol = protocol;
+	}
+
+	/**
+	 * @return the url
+	 */
+	public String getUrl()
+	{
+		return url;
+	}
+
+	/**
+	 * @param url the url to set
+	 */
+	public void setUrl(String url)
+	{
+		this.url = url;
+	}
+
+	/**
+	 * @return the pathName
+	 */
+	public String getPathName()
+	{
+		return pathName;
+	}
+
+	/**
+	 * @param pathName the pathName to set
+	 */
+	public void setPathName(String pathName)
+	{
+		this.pathName = pathName;
 	}
 }

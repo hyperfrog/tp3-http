@@ -6,7 +6,6 @@ import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -28,7 +27,8 @@ public class MainApp
 	public static void main(String[] args)
 	{
 		final String serverPath = "C:/Users/Public/Documents/HTTP_Server/";
-		final String site = "Javadoc";
+		final String siteFolder = "Javadoc";
+		final String ipAddress = "127.0.0.1"; 
 		final int portNum = 80;
 		boolean serverIsActive = true;
 
@@ -41,10 +41,7 @@ public class MainApp
 			try
 			{
 				// Open the file 
-				FileInputStream fis = new FileInputStream(mtFile);
-				// Get the object of DataInputStream
-				DataInputStream dis = new DataInputStream(fis);
-				BufferedReader br = new BufferedReader(new InputStreamReader(dis));
+				BufferedReader br = new BufferedReader(new InputStreamReader(new DataInputStream(new FileInputStream(mtFile))));
 				String line;
 				//Read File Line By Line
 				while ((line = br.readLine()) != null)
@@ -56,27 +53,25 @@ public class MainApp
 				}
 				//Close the input stream
 				br.close();
-				dis.close();
-				fis.close();
 			}
 			catch (IOException e) //Catch exception if any
 			{
-				System.err.println("Error: " + e.getMessage());
+				System.err.println("Problem reading MIME types: " + e.getMessage());
 			}
 		}
 
 		ServerSocket server = null;
 		Socket clientSocket = null;
 		BufferedReader in = null;
-		PrintWriter out = null;
+//		PrintWriter out = null;
 		   
 		try
 		{
-			server = new ServerSocket(portNum, 10, InetAddress.getByName("127.0.0.1"));
+			server = new ServerSocket(portNum, 10, InetAddress.getByName(ipAddress));
 		}
 		catch (IOException e)
 		{
-			System.out.println(String.format("Could not listen on port %d.", portNum));
+			System.err.println(String.format("Could not listen on port %d of interface %s.", portNum, ipAddress));
 			System.exit(-1);
 		}
 
@@ -86,14 +81,13 @@ public class MainApp
 			{
 				clientSocket = server.accept();
 				
-				in = new BufferedReader(new InputStreamReader(
-						clientSocket.getInputStream()));
+				in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 				
-				out = new PrintWriter(clientSocket.getOutputStream(), true);
+//				out = new PrintWriter(clientSocket.getOutputStream(), true);
 			}
 			catch (IOException e)
 			{
-				System.out.println(String.format("Accept failed: %d.", portNum));
+				System.err.println(String.format("Accept failed: %s:%d.", ipAddress, portNum));
 				System.exit(-1);
 			}
 
@@ -113,82 +107,65 @@ public class MainApp
 
 				HttpRequest request = new HttpRequest(requestHeader);
 
-				if (request.method.equals("GET")) 
+				if (request.getMethod().equals("GET")) 
 				{
 					HttpResponse response = new HttpResponse();
 
-					response.cacheable = true;
-					response.fileName = serverPath + site + request.pathName;
+					response.setCacheable(true);
+					response.setFileName(serverPath + siteFolder + request.getPathName());
 
-					File f = new File(response.fileName);
+					File f = new File(response.getFileName());
 
 					if (f.exists()) 
 					{
 						// if dateTime1 is NOT earlier than dateTime2 -> 304 Not Modified
-						if (request.fields.get("If-Modified-Since") != null 
-							&& !DateUtil.parseDate(request.fields.get("If-Modified-Since")).before(
+						if (request.getField("If-Modified-Since") != null 
+							&& !DateUtil.parseDate(request.getField("If-Modified-Since")).before(
 								DateUtil.parseDate(DateUtil.formatDate(new Date(f.lastModified())))))
 						{
-							response.statusCode = 304;
-							response.makeHeader();
-							out.write(response.header);
-							out.flush();
-							System.out.print(response.header);
+							response.setStatusCode(304);
 						}
 						else
 						{
-							response.statusCode = 200;
+							response.setStatusCode(200);
 
 							int fileSize = (int) f.length();
 							
 							try
 							{
-								// Open the file 
-								FileInputStream fis = new FileInputStream(f);
-								// Get the object of DataInputStream	
-								DataInputStream dis = new DataInputStream(fis);
+								// Open the file   
+								DataInputStream dis = new DataInputStream(new FileInputStream(f));
 								byte[] data = new byte[fileSize];
 								dis.readFully(data);
 
-								response.content = new String(data);
-								response.fields.put("Content-Size", str$(fileSize));
+								response.setContent(data);
 
 								Pattern pFileExtension = Pattern.compile("\\.([^\\.]+)\\Z");
-								Matcher mFileExtension = pFileExtension.matcher(response.fileName);
+								Matcher mFileExtension = pFileExtension.matcher(response.getFileName());
 								
 								if (mFileExtension.find()) 
 								{
 									String fileMimeType = mimeTypes.get(mFileExtension.group(1));
-									response.fields.put("Content-Type", fileMimeType);
+									response.setField("Content-Type", fileMimeType);
 								}
 
-								response.fields.put("Cache-Control", "public");
-								response.fields.put("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
-
-								dis.close();
-								fis.close();
+								response.setField("Cache-Control", "public");
+								response.setField("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
 							}
 							catch (IOException e)
 							{
 								// TODO : Incapable de lire le fichier demandé
-								System.out.println(e.getMessage());
+								System.err.println("Error: " + e.getMessage());
 							}
-
-							response.makeHeader();
-
-							out.write(response.header);
-							out.flush();
-							System.out.print(response.header);
-							out.write(response.content);
 						}
 					}
 					else
 					{
-						response.statusCode = 404;
-						response.fields.put("Content-Size", str$(0));
+						response.setStatusCode(404);
+						response.setField("Content-Size", str$(0));
 
-						if (request.fields.get("Accept") != null 
-							&& split(request.fields.get("Accept"), ", ").contains("text/html"))
+						if (request.getField("Accept") != null 
+							&& split(request.getField("Accept"), ", ").contains("text/html"))
 						{
 							File f404 = new File(serverPath + "error_404.htm");
 
@@ -199,44 +176,33 @@ public class MainApp
 								try
 								{
 									// Open the file 
-									FileInputStream fis = new FileInputStream(f404);
-									// Get the object of DataInputStream	
-									DataInputStream dis = new DataInputStream(fis);
+									DataInputStream dis = new DataInputStream(new FileInputStream(f404));
 									byte[] data = new byte[fileSize];
 
 									dis.readFully(data);
 									
-									response.content = new String(data);
-									response.fields.put("Content-Size", str$(fileSize));
-									response.fields.put("Content-Type", "text/html");
-									
-									dis.close();
-									fis.close();
+									response.setContent(data);
+									response.setField("Content-Type", "text/html");
 								}
 								catch (IOException e)
 								{
 									// TODO : Incapable de lire le fichier erreur 404
-									System.out.println(e.getMessage());
+									System.err.println("Error: " + e.getMessage());
 								}
 							}
 						}
-
-						response.makeHeader();
-
-						out.write(response.header);
-						out.flush();
-						System.out.print(response.header);
-						out.write(response.content);
 					}
+					response.makeHeader();
+					System.out.print(response.getHeader());
+					response.send(clientSocket.getOutputStream());
 				}
-				out.flush();
-		        out.close();
+//				out.close();
 		        in.close();
 		        clientSocket.close();
 			}
 			catch (IOException e)
 			{
-				System.out.println(e.getMessage());
+				System.err.println("Error: " + e.getMessage());
 			}
 		}
 	}
