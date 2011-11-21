@@ -1,7 +1,7 @@
-package HttpServer;
+package http;
 
+import static http.MainApp.*;
 import static util.BasicString.*;
-import static HttpServer.MainApp.*;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
