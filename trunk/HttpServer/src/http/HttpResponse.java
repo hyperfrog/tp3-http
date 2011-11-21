@@ -1,4 +1,4 @@
-package HttpServer;
+package http;
 
 import static util.BasicString.str$;
 
