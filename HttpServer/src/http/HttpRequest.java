@@ -1,7 +1,8 @@
 package http;
 
 import static http.MainApp.*;
-import static util.BasicString.*;
+import static util.BasicString.split;
+import static util.BasicString.stringToMap;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -20,6 +21,7 @@ public class HttpRequest
 	private String pathName;
 	private Map<String, String> parameters;
 	private Map<String, String> fields;
+	private ArrayList<String> acceptList;
 	
 	public HttpRequest(String header)
 	{
@@ -30,13 +32,13 @@ public class HttpRequest
 		this.pathName = "";
 		this.parameters = new HashMap<String, String>();
 		this.fields = new HashMap<String, String>();
+		this.acceptList = new ArrayList<String>();
 		this.parseHeader();
 	}
 
 	private void parseHeader()
 	{
 		Pattern pFullRequest = Pattern.compile("\\A((GET)|(HEAD)|(POST)|(PUT)) (/[^ ]*) (HTTP/.+)\\Z");
-		Pattern pRequestFields = Pattern.compile("\\A([^:]+): (.+)\\Z");
 
 		ArrayList<String> headerLines = split(this.header, "\n", true);
 
@@ -72,6 +74,8 @@ public class HttpRequest
 
 			if (headerLines.size() > 1)
 			{
+				Pattern pRequestFields = Pattern.compile("\\A([^:]+): (.+)\\Z");
+
 				for (String line : headerLines.subList(1, headerLines.size()))
 				{
 					Matcher mRequestFields = pRequestFields.matcher(line);
@@ -79,6 +83,16 @@ public class HttpRequest
 					if (mRequestFields.find())
 					{
 						this.fields.put(mRequestFields.group(1), mRequestFields.group(2));
+					}
+				}
+				
+				if (this.fields.containsKey("Accept"))
+				{
+					this.acceptList = split(this.getField("Accept"), ",");
+
+					for (int i = 0; i < acceptList.size(); i++)
+					{
+						this.acceptList.set(i, this.acceptList.get(i).trim());
 					}
 				}
 			}
@@ -89,36 +103,46 @@ public class HttpRequest
 	{
 		if (this.url.indexOf('?') > -1) 
 		{
-			ArrayList<String> tmpArr = split(this.url, "?");		//get pathname and parameters
-			this.pathName = tmpArr.get(0);
-			if (tmpArr.get(1).length() > 0) 
+			ArrayList<String> urlParts = split(this.url, "?");		//get pathname and parameters
+			this.pathName = urlParts.get(0);
+			if (urlParts.get(1).length() > 0) 
 			{
-				ArrayList<String> tmpParam = split(tmpArr.get(1), "&");	//dissects parameters for detail
-				if (tmpParam.size() > 0) 
-				{
-					for(String p : tmpParam)
-					{
-						ArrayList<String> sides = split(p, "=");
-//						for (int i = 0; i < sides.size(); i++)
+				this.parameters = stringToMap(urlParts.get(1), "&", "=", true);
+				
+//				ArrayList<String> tmpParam = split(urlParts.get(1), "&");	//dissects parameters for detail
+//				if (tmpParam.size() > 0) 
+//				{
+//					for(String p : tmpParam)
+//					{
+//						ArrayList<String> sides = split(p, "=");
+////						for (int i = 0; i < sides.size(); i++)
+////						{
+////							sides.set(i, unescape(sides.get(i)));
+////							if (!UTF8_is_ASCII(sides.get(i)) && UTF8_is_MultiByte(sides.get(i))) 
+////							{
+////								sides.set(i, UTF8_to_Latin1(sides.get(i)));
+////							}
+////						}
+//						if (sides.size() >= 2)
 //						{
-//							sides.set(i, unescape(sides.get(i)));
-//							if (!UTF8_is_ASCII(sides.get(i)) && UTF8_is_MultiByte(sides.get(i))) 
-//							{
-//								sides.set(i, UTF8_to_Latin1(sides.get(i)));
-//							}
+//							this.parameters.put(sides.get(0), sides.get(1));
 //						}
-						if (sides.size() >= 2)
-						{
-							this.parameters.put(sides.get(0), sides.get(1));
-						}
-					}
-				}
+//					}
+//				}
 			}
 		}
 		else
 		{
 			this.pathName = this.url;
 		}
+	}
+	
+	/**
+	 * @return the acceptList
+	 */
+	public ArrayList<String> getAcceptList()
+	{
+		return acceptList;
 	}
 
 	/**
@@ -145,7 +169,7 @@ public class HttpRequest
 	 */
 	public void setParam(String param, String value)
 	{
-		this.fields.put(param, value);
+		this.parameters.put(param, value);
 	}
 	
 	/**
@@ -154,7 +178,7 @@ public class HttpRequest
 	 */
 	public String getParam(String param)
 	{
-		return this.fields.get(param);
+		return this.parameters.get(param);
 	}
 	
 	/**
