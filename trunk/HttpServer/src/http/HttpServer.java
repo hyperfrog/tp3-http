@@ -1,11 +1,7 @@
 package http;
 
-import static util.BasicString.*;
-
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
@@ -56,12 +52,13 @@ class HttpServer implements Runnable
 				HttpResponse response = new HttpResponse();
 
 				response.setCacheable(true);
-				response.setFileName(this.serverPath + this.siteRoot + request.getPathName());
 
-				File f = new File(response.getFileName());
+				File f = new File(this.serverPath + this.siteRoot + request.getPathName());
 
 				if (f.exists()) 
 				{
+					response.setFileName(f.getAbsolutePath());
+					
 					// if dateTime1 is NOT earlier than dateTime2 -> 304 Not Modified
 					if (request.getField("If-Modified-Since") != null 
 						&& !DateUtil.parseDate(request.getField("If-Modified-Since")).before(
@@ -73,66 +70,35 @@ class HttpServer implements Runnable
 					{
 						response.setStatusCode(200);
 
-						int fileSize = (int) f.length();
-						
-						try
+						Pattern pFileExtension = Pattern.compile("\\.([^\\.]+)\\Z");
+						Matcher mFileExtension = pFileExtension.matcher(response.getFileName());
+
+						if (mFileExtension.find()) 
 						{
-							// Open the file   
-							DataInputStream dis = new DataInputStream(new FileInputStream(f));
-							byte[] data = new byte[fileSize];
-							dis.readFully(data);
-
-							response.setContent(data);
-
-							Pattern pFileExtension = Pattern.compile("\\.([^\\.]+)\\Z");
-							Matcher mFileExtension = pFileExtension.matcher(response.getFileName());
-							
-							if (mFileExtension.find()) 
-							{
-								String fileMimeType = this.mimeTypes.get(mFileExtension.group(1));
-								response.setField("Content-Type", fileMimeType);
-							}
-
-							response.setField("Cache-Control", "public");
-							response.setField("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
+							String fileMimeType = this.mimeTypes.get(mFileExtension.group(1));
+							response.setField("Content-Type", fileMimeType);
 						}
-						catch (IOException e)
-						{
-							// TODO : Incapable de lire le fichier demandé
-							System.err.println("Error: " + e.getMessage());
-						}
+
+						response.setField("Cache-Control", "public");
+						response.setField("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
+						response.setField("Content-Length", f.length() + "");
 					}
 				}
 				else
 				{
 					response.setStatusCode(404);
-					response.setField("Content-Size", str$(0));
-
-					if (request.getField("Accept") != null 
-						&& split(request.getField("Accept"), ", ").contains("text/html"))
+					response.setField("Content-Length", "0");
+					
+					if (request.getAcceptList().contains("text/html"))
 					{
 						File f404 = new File(this.serverPath + "error_404.htm");
 
 						if (f404.exists())
 						{
-							int fileSize = (int) f404.length();
+							response.setFileName(f404.getAbsolutePath());
 
-							try
-							{
-								// Open the file 
-								DataInputStream dis = new DataInputStream(new FileInputStream(f404));
-								byte[] data = new byte[fileSize];
-
-								dis.readFully(data);
-								
-								response.setContent(data);
-								response.setField("Content-Type", "text/html");
-							}
-							catch (IOException e)
-							{
-								// TODO : Incapable de lire le fichier erreur 404
-								System.err.println("Error: " + e.getMessage());
-							}
+							response.setField("Content-Type", "text/html");
+							response.setField("Content-Length", f404.length() + "");
 						}
 					}
 				}
@@ -146,6 +112,7 @@ class HttpServer implements Runnable
 		catch (IOException e)
 		{
 			System.err.println("Error: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 }

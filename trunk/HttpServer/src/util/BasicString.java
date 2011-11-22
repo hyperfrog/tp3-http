@@ -1,10 +1,32 @@
 package util;
+
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 public class BasicString
 {
+	public static Map<String, String> stringToMap(String in, String entrySep, String keyValSep, boolean trim)
+	{
+		HashMap<String, String> map = new HashMap<String, String>(); 
+
+		ArrayList<String> entries = split(in, entrySep);
+
+		for(String entry : entries)
+		{
+			ArrayList<String> sides = split(entry, keyValSep);
+			if (sides.size() >= 2)
+			{
+				String key = trim ? sides.get(0).trim() : sides.get(0);
+				String val = trim ? sides.get(1).trim() : sides.get(1);
+				map.put(key, val);
+			}
+		}
+		return map;
+	}
+
 	public static String Date$()
 	{
 		String date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date());

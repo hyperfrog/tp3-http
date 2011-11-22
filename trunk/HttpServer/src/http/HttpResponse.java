@@ -1,7 +1,7 @@
 package http;
 
-import static util.BasicString.str$;
-
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -14,6 +14,7 @@ import util.DateUtil;
 
 public class HttpResponse
 {
+	private static final int KB_PER_SECOND = 50; 
 	private static final Map<Integer, String> statusCodeDesc = new HashMap<Integer, String>();
 	static
 	{
@@ -81,9 +82,9 @@ public class HttpResponse
 		this.cacheable = true;
 	}
 
-	public void makeHeader()
+	public boolean makeHeader()
 	{
-		if (statusCodeDesc.get(this.statusCode) != null) 
+		if (statusCodeDesc.containsKey(this.statusCode))
 		{
 			this.fields.put("Date", DateUtil.formatDate(new Date()));
 			if (!this.cacheable) 
@@ -99,27 +100,64 @@ public class HttpResponse
 				this.header += String.format("%s: %s\r\n", field, this.fields.get(field));
 			}
 			this.header += "\r\n";
+			
+			return true;
 		}
+		return false;
 	}
 	
-	public void send(OutputStream os) throws IOException
+	public boolean send(OutputStream os) throws IOException
 	{
-		if (this.header.isEmpty())
+		if (statusCodeDesc.containsKey(this.statusCode))
 		{
-			this.makeHeader();
+			if (this.header.isEmpty())
+			{
+				this.makeHeader();
+			}
+
+			OutputStreamWriter osw = new OutputStreamWriter(os);
+
+			osw.write(this.header);
+			osw.flush();
+
+			if (this.fields.containsKey("Content-Length") && !this.getField("Content-Length").equals("0"))
+			{
+				if (this.content == null )
+				{
+					// Open the file   
+					FileInputStream fis = new FileInputStream(new File(this.fileName));
+
+					byte[] buf = new byte[1024];
+					int len;
+
+					while ((len = fis.read(buf)) > 0)
+					{
+						os.write(buf, 0, len);
+						try
+						{
+							Thread.sleep(1000/KB_PER_SECOND);
+						}
+						catch (InterruptedException e)
+						{
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+
+					fis.close();
+					os.flush();
+				}
+				else
+				{
+					os.write(this.content);
+					os.flush();
+				}
+			}
+			return true;
 		}
-		
-		OutputStreamWriter osw = new OutputStreamWriter(os);
-		
-		osw.write(this.header);
-		osw.flush();
-		
-		if (this.content != null && this.content.length > 0)
-		{
-			os.write(this.content);
-			os.flush();
-		}
+		return false;
 	}
+	
 	/**
 	 * @param field
 	 * @param value
@@ -168,7 +206,7 @@ public class HttpResponse
 	public void setContent(byte[] content)
 	{
 		this.content = content;
-		this.fields.put("Content-Size", str$(this.content.length));
+		this.fields.put("Content-Length", this.content.length + "");
 	}
 
 	/**
@@ -222,9 +260,14 @@ public class HttpResponse
 	/**
 	 * @param statusCode the statusCode to set
 	 */
-	public void setStatusCode(int statusCode)
+	public boolean setStatusCode(int statusCode)
 	{
-		this.statusCode = statusCode;
+		if (statusCodeDesc.containsKey(statusCode))
+		{
+			this.statusCode = statusCode;
+			return true;
+		}
+		return false;
 	}
 
 	/**

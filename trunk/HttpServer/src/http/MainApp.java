@@ -1,15 +1,13 @@
 package http;
 
-import static util.BasicString.*;
-import java.io.BufferedReader;
+import static util.BasicString.stringToMap;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,7 +19,6 @@ public class MainApp
 	private final static String MIME_TYPES_FILE = "mime_types.txt"; 
 	private final static int PORT_NUM = 80;
 	private final static int BACKLOG = 10;
-//	private final static int MAX_CONNECTIONS = 0;
 	private final static int MAX_THREADS = 10;
 
 	/**
@@ -35,45 +32,44 @@ public class MainApp
 		Map<String, String> mimeTypes = new HashMap<String, String>();
 		
 		File mtFile = new File(SERVER_PATH + MIME_TYPES_FILE);
-//		if (mtFile.exists())
+		try
 		{
-			try
-			{
-				// Open the file 
-				BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(mtFile)));
-				String line;
-				//Read File Line By Line
-				while ((line = br.readLine()) != null)
-				{
-					ArrayList<String> lineArr = split(line, "=");
-					String key = trim$(lineArr.get(0));
-					String val = trim$(lineArr.get(1));
-					mimeTypes.put(key, val);
-				}
-				//Close the input stream
-				br.close();
-			}
-			catch (IOException e) //Catch exception if any
-			{
-				System.err.println("Problem reading MIME types: " + e.getMessage());
-				System.exit(-1);
-			}
+			// Read the file   
+			FileInputStream fis = new FileInputStream(mtFile);
+			byte[] mtData = new byte[(int) mtFile.length()];
+			fis.read(mtData);
+			fis.close();
+			mimeTypes = stringToMap(new String(mtData), "\n", "=", true);
+		}
+		catch (IOException e) //Catch exception if any
+		{
+			System.err.println("Problem reading MIME types: " + e.getMessage());
+			System.exit(-1);
 		}
 
-//		int i = 0;
 		try
 		{
 			ServerSocket listener = new ServerSocket(PORT_NUM, BACKLOG, InetAddress.getByName(IP_ADDRESS));
 			Socket clientSocket;
 			
-			while (true) //((i++ < MAX_CONNECTIONS) || (MAX_CONNECTIONS == 0))
+			while (true) 
 			{
 				clientSocket = listener.accept();
 
 				System.out.println(Thread.activeCount());
 				
 				while (Thread.activeCount() >= MAX_THREADS)
-					   Thread.sleep(20); 
+				{
+					try
+					{
+						Thread.sleep(20);
+					}
+					catch (InterruptedException e)
+					{
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
 
 				HttpServer server = new HttpServer(clientSocket, SERVER_PATH, SITE_FOLDER, mimeTypes);
 				Thread t = new Thread(server);
@@ -82,14 +78,9 @@ public class MainApp
 		}
 		catch (IOException e)
 		{
-			System.out.println("IOException on socket listen: " + e);
+			System.out.println("IOException on socket listen: " + e.getMessage());
 			e.printStackTrace();
 			System.exit(-1);
-		}
-		catch (InterruptedException e)
-		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
 
