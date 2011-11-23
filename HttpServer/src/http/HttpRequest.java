@@ -51,7 +51,7 @@ public class HttpRequest
 
 			try
 			{
-				this.url = URLDecoder.decode(mFullRequest.group(6), "UTF-8");
+				this.url = URLDecoder.decode(mFullRequest.group(6), "ISO-8859-1");
 			}
 			catch (UnsupportedEncodingException e)
 			{
