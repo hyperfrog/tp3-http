@@ -1,10 +1,16 @@
 package http;
 
+import http.event.RequestEvent;
+import http.event.RequestEventProcessor;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.Socket;
+import java.net.URI;
+import java.net.URL;
 import java.util.Date;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -12,19 +18,25 @@ import java.util.regex.Pattern;
 
 import util.DateUtil;
 
-class HttpServer implements Runnable
+public class HttpServer implements Runnable
 {
-	private Socket socket;
+	private Socket socket = null;
 	private String serverPath;
-	private String siteRoot;
+	private String siteRoot = "";
 	private Map<String, String> mimeTypes;
+	private RequestEventProcessor evtProcessor;
+	private HttpRequest request;
+	private HttpResponse response;
 	
-	HttpServer(Socket clientSocket, String serverPath, String siteRoot, Map<String, String> mimeTypes)
+	HttpServer(Socket client, String serverPath, String siteRoot, Map<String, String> mimeTypes, RequestEventProcessor ep)
 	{
-		this.socket = clientSocket;
-		this.serverPath = serverPath;
+		this.socket = client;
+		File file = new File(serverPath);
+
+		this.serverPath = file.isDirectory() ? file.getAbsolutePath() + "\\" : "";
 		this.siteRoot = siteRoot;
 		this.mimeTypes = mimeTypes;
+		this.evtProcessor = ep;
 	}
 
 	public void run()
@@ -36,6 +48,7 @@ class HttpServer implements Runnable
 			String requestHeader = new String();
 			String line;
 			
+			// Lit l'en-tête (header)
 			do
 			{
 				line = in.readLine();
@@ -43,70 +56,75 @@ class HttpServer implements Runnable
 
 			} while (line != null && !line.isEmpty());
 
-			System.out.print(requestHeader);
+			this.request = new HttpRequest(requestHeader);
+			this.response = new HttpResponse();
 
-			HttpRequest request = new HttpRequest(requestHeader);
+			RequestEvent evt = new RequestEvent(this, Thread.currentThread());
+			
+			this.evtProcessor.requestEventReceived(evt);
 
-			if (request.getMethod().equals("GET")) 
+//			System.out.println(String.format("%d, %s", Thread.currentThread().getId(), Thread.currentThread().getName()));
+//			System.out.print(requestHeader);
+
+			if (!evt.cancel && this.request.getMethod().equals("GET")) 
 			{
-				HttpResponse response = new HttpResponse();
+				this.response.setCacheable(true);
 
-				response.setCacheable(true);
-
-				File f = new File(this.serverPath + this.siteRoot + request.getPathName());
+				File f = new File(this.serverPath + this.siteRoot + this.request.getPathName());
 
 				if (f.exists()) 
 				{
-					response.setFileName(f.getAbsolutePath());
+					this.response.setFileName(f.getAbsolutePath());
 					
 					// if dateTime1 is NOT earlier than dateTime2 -> 304 Not Modified
-					if (request.getField("If-Modified-Since") != null 
-						&& !DateUtil.parseDate(request.getField("If-Modified-Since")).before(
+					if (this.request.getField("If-Modified-Since") != null 
+						&& !DateUtil.parseDate(this.request.getField("If-Modified-Since")).before(
 							DateUtil.parseDate(DateUtil.formatDate(new Date(f.lastModified())))))
 					{
-						response.setStatusCode(304);
+						this.response.setStatusCode(304);
 					}
 					else
 					{
-						response.setStatusCode(200);
+						this.response.setStatusCode(200);
 
 						Pattern pFileExtension = Pattern.compile("\\.([^\\.]+)\\Z");
-						Matcher mFileExtension = pFileExtension.matcher(response.getFileName());
+						Matcher mFileExtension = pFileExtension.matcher(this.response.getFileName());
 
 						if (mFileExtension.find()) 
 						{
 							String fileMimeType = this.mimeTypes.get(mFileExtension.group(1));
-							response.setField("Content-Type", fileMimeType);
+							this.response.setField("Content-Type", fileMimeType);
 						}
 
-						response.setField("Cache-Control", "public");
-						response.setField("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
-						response.setField("Content-Length", f.length() + "");
+						this.response.setField("Cache-Control", "public");
+						this.response.setField("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
+						this.response.setField("Content-Length", f.length() + "");
 					}
 				}
 				else
 				{
-					response.setStatusCode(404);
-					response.setField("Content-Length", "0");
+					this.response.setStatusCode(404);
+					this.response.setField("Content-Length", "0");
 					
-					if (request.getAcceptList().contains("text/html"))
+					if (this.request.getAcceptList().contains("text/html"))
 					{
 						File f404 = new File(this.serverPath + "error_404.htm");
 
 						if (f404.exists())
 						{
-							response.setFileName(f404.getAbsolutePath());
+							this.response.setFileName(f404.getAbsolutePath());
 
-							response.setField("Content-Type", "text/html");
-							response.setField("Content-Length", f404.length() + "");
+							this.response.setField("Content-Type", "text/html");
+							this.response.setField("Content-Length", f404.length() + "");
 						}
 					}
 				}
-				response.makeHeader();
-				System.out.print(response.getHeader());
-				response.send(this.socket.getOutputStream());
+				this.response.makeHeader();
+//				System.out.println(String.format("%d, %s", Thread.currentThread().getId(), Thread.currentThread().getName()));
+				System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
+				System.out.print(this.response.getHeader());
+				this.response.send(this.socket.getOutputStream());
 			}
-	        in.close();
 	        this.socket.close();
 		}
 		catch (IOException e)
@@ -115,4 +133,29 @@ class HttpServer implements Runnable
 			e.printStackTrace();
 		}
 	}
+
+	/**
+	 * @return the request
+	 */
+	public HttpRequest getRequest()
+	{
+		return request;
+	}
+
+	/**
+	 * @return the response
+	 */
+	public HttpResponse getResponse()
+	{
+		return response;
+	}
+
+	/**
+	 * @return the socket
+	 */
+	public Socket getSocket()
+	{
+		return socket;
+	}
+	
 }

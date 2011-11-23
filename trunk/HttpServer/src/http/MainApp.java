@@ -2,6 +2,9 @@ package http;
 
 import static util.BasicString.stringToMap;
 
+import http.event.RequestEvent;
+import http.event.RequestEventProcessor;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -13,74 +16,38 @@ import java.util.Map;
 
 public class MainApp
 {
-	private final static String SERVER_PATH = "C:/Users/Public/Documents/HTTP_Server/";
+	private final static int DURATION = 0;
+	private final static String SERVER_PATH = "/C:/Users/Public/Documents/HTTP_Server/";
 	private final static String SITE_FOLDER = "Javadoc";
 	private final static String IP_ADDRESS = "127.0.0.1"; 
-	private final static String MIME_TYPES_FILE = "mime_types.txt"; 
 	private final static int PORT_NUM = 80;
-	private final static int BACKLOG = 10;
-	private final static int MAX_THREADS = 10;
 
 	/**
 	 * @param args
 	 */
+	@SuppressWarnings("unused")
 	public static void main(String[] args)
 	{
-//		boolean serverIsActive = true;
-
-		// Read MIME types
-		Map<String, String> mimeTypes = new HashMap<String, String>();
+		SocketListener sl = new SocketListener(SERVER_PATH, SITE_FOLDER, IP_ADDRESS, PORT_NUM);
+		Thread slt = new Thread(sl);
+		slt.start();
 		
-		File mtFile = new File(SERVER_PATH + MIME_TYPES_FILE);
 		try
 		{
-			// Read the file   
-			FileInputStream fis = new FileInputStream(mtFile);
-			byte[] mtData = new byte[(int) mtFile.length()];
-			fis.read(mtData);
-			fis.close();
-			mimeTypes = stringToMap(new String(mtData), "\n", "=", true);
-		}
-		catch (IOException e) //Catch exception if any
-		{
-			System.err.println("Problem reading MIME types: " + e.getMessage());
-			System.exit(-1);
-		}
-
-		try
-		{
-			ServerSocket listener = new ServerSocket(PORT_NUM, BACKLOG, InetAddress.getByName(IP_ADDRESS));
-			Socket clientSocket;
-			
-			while (true) 
+			if (DURATION > 0)
 			{
-				clientSocket = listener.accept();
-
-				System.out.println(Thread.activeCount());
-				
-				while (Thread.activeCount() >= MAX_THREADS)
-				{
-					try
-					{
-						Thread.sleep(20);
-					}
-					catch (InterruptedException e)
-					{
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-
-				HttpServer server = new HttpServer(clientSocket, SERVER_PATH, SITE_FOLDER, mimeTypes);
-				Thread t = new Thread(server);
-				t.start();
+				Thread.sleep(DURATION * 1000);
+				sl.stop();
+				System.out.println(String.format("%d secondes écoulées.", DURATION));
+			}
+			else
+			{
+				slt.join();
 			}
 		}
-		catch (IOException e)
+		catch (InterruptedException e)
 		{
-			System.out.println("IOException on socket listen: " + e.getMessage());
 			e.printStackTrace();
-			System.exit(-1);
 		}
 	}
 
