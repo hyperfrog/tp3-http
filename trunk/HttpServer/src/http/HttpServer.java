@@ -59,18 +59,18 @@ public class HttpServer implements Runnable
 			this.request = new HttpRequest(requestHeader);
 			this.response = new HttpResponse();
 
+			System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
+			System.out.print(requestHeader);
+
 			RequestEvent evt = new RequestEvent(this, Thread.currentThread());
 			
 			this.evtProcessor.requestEventReceived(evt);
-
-//			System.out.println(String.format("%d, %s", Thread.currentThread().getId(), Thread.currentThread().getName()));
-//			System.out.print(requestHeader);
 
 			if (!evt.cancel && this.request.getMethod().equals("GET")) 
 			{
 				this.response.setCacheable(true);
 
-				File f = new File(this.serverPath + this.siteRoot + this.request.getPathName());
+				File f = new File(this.serverPath + this.siteRoot + this.request.getPath());
 
 				if (f.exists()) 
 				{
@@ -106,7 +106,7 @@ public class HttpServer implements Runnable
 					this.response.setStatusCode(404);
 					this.response.setField("Content-Length", "0");
 					
-					if (this.request.getAcceptList().contains("text/html"))
+					if (this.request.accepts("text/html"))
 					{
 						File f404 = new File(this.serverPath + "error_404.htm");
 
@@ -157,5 +157,4 @@ public class HttpServer implements Runnable
 	{
 		return socket;
 	}
-	
 }

@@ -12,6 +12,7 @@ import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import http.event.RequestEvent;
 import http.event.RequestEventProcessor;
@@ -94,7 +95,7 @@ public class SocketListener implements RequestEventProcessor, Runnable
 					clientSocket = listener.accept();
 					int nbThreads = Thread.activeCount();
 					
-					System.out.print(String.format("Il y a présentement %d thread(s) actif(s).\n", nbThreads));
+					System.out.print(String.format("Il y a présentement %d thread(s) actif(s).\n\n", nbThreads));
 					
 					while (nbThreads >= MAX_THREADS)
 					{
@@ -118,33 +119,38 @@ public class SocketListener implements RequestEventProcessor, Runnable
 	@Override
 	public void requestEventReceived(RequestEvent evt)
 	{
-		System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
-		System.out.print(((HttpServer)evt.getSource()).getRequest().getHeader());
-		
 		HttpServer s = ((HttpServer)evt.getSource());
 		HttpRequest req = s.getRequest();
 		HttpResponse res = s.getResponse();
 		
-		if (req.getPathName().startsWith("/haha.html"))
+		if (req.getPath().equals("/haha.html"))
 		{
 			evt.cancel = true;
 
 			res.setStatusCode(200);
 
-			String value = req.getParam("toto");
-			if (value != null)
+			String content = new String();
+			
+			Set<String> keys = req.getParamKeySet();
+			
+			for(String key : keys)
 			{
-				res.setField("Content-Length", value.length() + "");
-				res.setContent(value, Charset.forName("ISO-8859-1"));
+				String value = req.getParam(key);
+//				if (value != null)
+				{
+					content += key + " = " + value + "\n";
+				}
 			}
-			else
-			{
-				res.setField("Content-Length", "0");
-			}
-				
+			
+//			res.setContent(content, Charset.forName("ISO-8859-1"));
+			res.setContent(content, Charset.forName("UTF-8"));
+//			res.setField("Content-Length", res.getContent().length + "");
+
 			res.makeHeader();
 			try
 			{
+				System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
+				System.out.print(res.getHeader());
 				res.send(s.getSocket().getOutputStream());
 //				s.getSocket().close();
 			}

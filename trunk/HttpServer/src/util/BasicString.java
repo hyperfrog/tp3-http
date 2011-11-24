@@ -1,13 +1,61 @@
 package util;
 
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern; 
+import java.util.regex.Matcher; 
 
 public class BasicString
 {
+
+	public static byte[] unescape(String text)
+	{
+		Pattern pHexByte = Pattern.compile("([^%]*)%([0123456789ABCDEF]{2})", Pattern.CASE_INSENSITIVE);
+		Matcher mHexByte = pHexByte.matcher(text);
+
+		ArrayList<Byte> byteList = new ArrayList<Byte>();
+
+		try
+		{
+			int lastMatchEndPos = 0;
+			
+			while (mHexByte.find())
+			{
+				lastMatchEndPos = mHexByte.end();
+
+				for (byte b : mHexByte.group(1).getBytes("ASCII"))
+				{
+					byteList.add(b);
+				}
+
+				byteList.add((byte)Integer.parseInt(mHexByte.group(2), 16));
+			}
+
+			for (byte b : text.substring(lastMatchEndPos, text.length()).getBytes("ASCII"))
+			{
+				byteList.add(b);
+			}
+		}
+		catch (UnsupportedEncodingException e)
+		{
+			e.printStackTrace();
+		}
+		
+		byte[] bytes = new byte[byteList.size()];
+
+		for (int i = 0; i < byteList.size(); i++)
+		{
+			bytes[i] = byteList.get(i);
+		}
+
+		return bytes;
+	}
+	
 	public static Map<String, String> stringToMap(String in, String entrySep, String keyValSep, boolean trim)
 	{
 		HashMap<String, String> map = new HashMap<String, String>(); 
@@ -26,6 +74,117 @@ public class BasicString
 		}
 		return map;
 	}
+
+	//  Bits  Pattern
+	//  ----  -------
+	//    7   0xxxxxxx
+	//   11   110xxxxx 10xxxxxx
+	//   16   1110xxxx 10xxxxxx 10xxxxxx
+	//   21   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+	//   26   111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+	//   32   111111xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+	
+	public static boolean isValidUtf8(byte[] bytes)
+	{
+		 int sLen;
+		 int n = 0;
+
+		 int[] UTF8len = 
+			 {
+				 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+				 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+				 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 6
+			 };
+
+		while(n < bytes.length)
+		{
+			sLen = UTF8len[band(bshr(bytes[n], 2), 0x3F)];
+
+			if (sLen == 0)
+			{
+				// erroneous: 10xxxxxx is normally found in the middle of a UTF-8 sequence
+				return false;
+			}
+
+			while (sLen - 1 > 0)
+			{
+				sLen--;
+				if (n == bytes.length - 1)
+				{
+					return false;
+				}
+				n++;
+				if (band(bytes[n], 0xC0) != 0x80) 
+				{
+					// erroneous: it should be 10xxxxxx
+					return false;
+				}
+			}
+			n++;
+		}
+		return true;
+	}
+	
+	public static boolean isAscii(byte[] bytes)
+	{
+		for(int i = 0; i < bytes.length; i++)
+		{
+			if ((bytes[i] & 0x80) > 0)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+	
+	public static String bytesToString(byte[] bytes, String encoding)
+	{
+		String str = null;
+		try
+		{
+			str = new String(bytes, encoding);
+		}
+		catch (UnsupportedEncodingException e) 
+		{
+			System.err.println("Unsupported encoding : " + encoding);
+			e.printStackTrace();
+		}
+		
+		return str;
+	}
+
+	public static String toHex(byte[] bytes)
+	{
+		BigInteger bi = new BigInteger(1, bytes);
+		return String.format("%0" + (bytes.length << 1) + "X", bi);
+	}
+
+	
+//	public static String toUtf8(byte[] bytes)
+//	{
+//		String utf8 = null;
+//		try
+//		{
+//			utf8 = new String(bytes, "UTF-8");
+//		}
+//		catch (UnsupportedEncodingException e) {}
+//		
+//		return utf8;
+//	}
+//	
+//	public static String toLatin1(byte[] bytes)
+//	{
+//		String latin1 = null;
+//		try
+//		{
+//			latin1 = new String(bytes, "ISO-8859-1");
+//		}
+//		catch (UnsupportedEncodingException e) {}
+//		
+//		return latin1;
+//	}
 
 	public static String Date$()
 	{
