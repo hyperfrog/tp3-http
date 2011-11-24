@@ -1,24 +1,22 @@
 package http;
 
-import static http.MainApp.*;
-import static util.BasicString.split;
-import static util.BasicString.stringToMap;
-
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
+import static util.BasicString.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern; 
 import java.util.regex.Matcher; 
 
 public class HttpRequest
 {
+	private static final String DEFAULT_URL_ENCODING = "ISO-8859-1";
+	
 	private String header;
 	private String method;
 	private String protocol;
-	private String url;
-	private String pathName;
+	private String fullPath;
+	private String path;
 	private Map<String, String> parameters;
 	private Map<String, String> fields;
 	private ArrayList<String> acceptList;
@@ -28,46 +26,45 @@ public class HttpRequest
 		this.header = header == null ? "" : header;
 		this.method = "";
 		this.protocol = "";
-		this.url = "";
-		this.pathName = "";
+		this.fullPath = "";
+		this.path = "";
 		this.parameters = new HashMap<String, String>();
 		this.fields = new HashMap<String, String>();
 		this.acceptList = new ArrayList<String>();
 		this.parseHeader();
 	}
-
+	
 	private void parseHeader()
 	{
-		Pattern pFullRequest = Pattern.compile("\\A((GET)|(HEAD)|(POST)|(PUT)) (/[^ ]*) (HTTP/.+)\\Z");
-
 		ArrayList<String> headerLines = split(this.header, "\n", true);
 
+		Pattern pFullRequest = Pattern.compile("\\A((GET)|(HEAD)|(POST)|(PUT)) (/[^ ]*) (HTTP/.+)\\Z");
 		Matcher mFullRequest = pFullRequest.matcher(headerLines.get(0));
 
 		if (mFullRequest.find()) 
 		{
 			this.method = mFullRequest.group(1);
 			this.protocol = mFullRequest.group(7);
+			this.fullPath = mFullRequest.group(6);
 
-			try
+			ArrayList<String> fullPathParts = split(this.fullPath, "?");
+
+			byte[] pathBytes = unescape(fullPathParts.get(0));
+
+			if (!isAscii(pathBytes) && isValidUtf8(pathBytes))
 			{
-				this.url = URLDecoder.decode(mFullRequest.group(6), "ISO-8859-1");
+				this.path = bytesToString(pathBytes, "UTF-8");
 			}
-			catch (UnsupportedEncodingException e)
+			else
 			{
-				this.url = mFullRequest.group(6);
+				this.path = bytesToString(pathBytes, DEFAULT_URL_ENCODING);
 			}
 
-			if (this.method.equals("GET"))
+//			if (this.method.equals("GET"))
+			if (fullPathParts.size() > 1)
 			{
-				this.parseGetParams();
+				this.parseGetParams(fullPathParts.get(1));
 			}
-
-//			this.pathName = unescape(this.pathName);
-//			if (!UTF8_is_ASCII(this.pathName) && UTF8_is_MultiByte(this.pathName)) 
-//			{
-//				this.pathName = UTF8_to_Latin1(this.pathName);
-//			}
 
 			// Remplace les / par des \ 
 //			this.pathName = join(split(this.pathName, "/"), "\\");
@@ -99,61 +96,44 @@ public class HttpRequest
 		}
 	}
 
-	private void parseGetParams()
+	private void parseGetParams(String params)
 	{
-		if (this.url.indexOf('?') > -1) 
+//		this.parameters = stringToMap(pathParts.get(1), "&", "=", true);
+
+		ArrayList<String> paramList = split(params, "&");	//dissects parameters for detail
+		if (paramList.size() > 0) 
 		{
-			ArrayList<String> urlParts = split(this.url, "?");		//get pathname and parameters
-			this.pathName = urlParts.get(0);
-			if (urlParts.get(1).length() > 0) 
+			for(String param : paramList)
 			{
-				this.parameters = stringToMap(urlParts.get(1), "&", "=", true);
-				
-//				ArrayList<String> tmpParam = split(urlParts.get(1), "&");	//dissects parameters for detail
-//				if (tmpParam.size() > 0) 
-//				{
-//					for(String p : tmpParam)
-//					{
-//						ArrayList<String> sides = split(p, "=");
-////						for (int i = 0; i < sides.size(); i++)
-////						{
-////							sides.set(i, unescape(sides.get(i)));
-////							if (!UTF8_is_ASCII(sides.get(i)) && UTF8_is_MultiByte(sides.get(i))) 
-////							{
-////								sides.set(i, UTF8_to_Latin1(sides.get(i)));
-////							}
-////						}
-//						if (sides.size() >= 2)
-//						{
-//							this.parameters.put(sides.get(0), sides.get(1));
-//						}
-//					}
-//				}
+				ArrayList<String> paramParts = split(param, "=");
+				for (int i = 0; i < 2 && i < paramParts.size(); i++)
+				{
+					byte[] paramPartBytes = unescape(paramParts.get(i));
+
+					if (!isAscii(paramPartBytes) && isValidUtf8(paramPartBytes)) 
+					{
+						paramParts.set(i, bytesToString(paramPartBytes, "UTF-8")); 
+					}
+					else
+					{
+						paramParts.set(i, bytesToString(paramPartBytes, DEFAULT_URL_ENCODING)); 
+					}
+				}
+
+				this.parameters.put(paramParts.get(0), paramParts.size() == 2 ? paramParts.get(1) : null);
 			}
 		}
-		else
-		{
-			this.pathName = this.url;
-		}
 	}
 	
 	/**
-	 * @return the acceptList
+	 * @param mimeType
+	 * @return
 	 */
-	public ArrayList<String> getAcceptList()
+	public boolean accepts(String mimeType)
 	{
-		return acceptList;
+		return acceptList.contains(mimeType);
 	}
 
-	/**
-	 * @param field
-	 * @param value
-	 */
-	public void setField(String field, String value)
-	{
-		this.fields.put(field, value);
-	}
-	
 	/**
 	 * @param field
 	 * @return
@@ -164,14 +144,13 @@ public class HttpRequest
 	}
 	
 	/**
-	 * @param param
-	 * @param value
+	 * @return
 	 */
-	public void setParam(String param, String value)
+	public Set<String> getFieldKeySet()
 	{
-		this.parameters.put(param, value);
+		return this.fields.keySet();
 	}
-	
+
 	/**
 	 * @param param
 	 * @return
@@ -179,6 +158,14 @@ public class HttpRequest
 	public String getParam(String param)
 	{
 		return this.parameters.get(param);
+	}
+	
+	/**
+	 * @return set of parameter keys
+	 */
+	public Set<String> getParamKeySet()
+	{
+		return this.parameters.keySet();
 	}
 	
 	/**
@@ -190,27 +177,11 @@ public class HttpRequest
 	}
 
 	/**
-	 * @param header the header to set
-	 */
-	public void setHeader(String header)
-	{
-		this.header = header;
-	}
-
-	/**
 	 * @return the method
 	 */
 	public String getMethod()
 	{
 		return method;
-	}
-
-	/**
-	 * @param method the method to set
-	 */
-	public void setMethod(String method)
-	{
-		this.method = method;
 	}
 
 	/**
@@ -222,42 +193,18 @@ public class HttpRequest
 	}
 
 	/**
-	 * @param protocol the protocol to set
+	 * @return the fullPath
 	 */
-	public void setProtocol(String protocol)
+	public String getFullPath()
 	{
-		this.protocol = protocol;
+		return fullPath;
 	}
 
 	/**
-	 * @return the url
+	 * @return the path
 	 */
-	public String getUrl()
+	public String getPath()
 	{
-		return url;
-	}
-
-	/**
-	 * @param url the url to set
-	 */
-	public void setUrl(String url)
-	{
-		this.url = url;
-	}
-
-	/**
-	 * @return the pathName
-	 */
-	public String getPathName()
-	{
-		return pathName;
-	}
-
-	/**
-	 * @param pathName the pathName to set
-	 */
-	public void setPathName(String pathName)
-	{
-		this.pathName = pathName;
+		return path;
 	}
 }
