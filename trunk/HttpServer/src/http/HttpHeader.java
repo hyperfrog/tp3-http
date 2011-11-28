@@ -12,6 +12,7 @@ import static util.BasicString.unescape;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -180,28 +181,33 @@ public class HttpHeader
 
 				if (headerLines.size() > 1)
 				{
-					Pattern pRequestFields = Pattern.compile("\\A([^:]+): (.+)\\Z");
-
-					for (String line : headerLines.subList(1, headerLines.size()))
-					{
-						Matcher mRequestFields = pRequestFields.matcher(line);
-
-						if (mRequestFields.find())
-						{
-							this.fields.put(mRequestFields.group(1), mRequestFields.group(2));
-						}
-					}
-
-					if (this.fields.containsKey("Accept"))
-					{
-						this.acceptList = split(this.getField("Accept"), ",");
-
-						for (int i = 0; i < acceptList.size(); i++)
-						{
-							this.acceptList.set(i, this.acceptList.get(i).trim());
-						}
-					}
+					this.parseFields(headerLines.subList(1, headerLines.size()));
 				}
+			}
+		}
+	}
+	
+	private void parseFields(List<String> fieldLines)
+	{
+		Pattern pRequestFields = Pattern.compile("\\A([^:]+): (.+)\\Z");
+
+		for (String line : fieldLines)
+		{
+			Matcher mRequestFields = pRequestFields.matcher(line);
+
+			if (mRequestFields.find())
+			{
+				this.fields.put(mRequestFields.group(1), mRequestFields.group(2));
+			}
+		}
+
+		if (this.fields.containsKey("Accept"))
+		{
+			this.acceptList = split(this.getField("Accept"), ",");
+
+			for (int i = 0; i < acceptList.size(); i++)
+			{
+				this.acceptList.set(i, this.acceptList.get(i).trim());
 			}
 		}
 	}
