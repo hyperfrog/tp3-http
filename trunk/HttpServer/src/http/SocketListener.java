@@ -120,22 +120,22 @@ public class SocketListener implements RequestEventProcessor, Runnable
 	public void requestEventReceived(RequestEvent evt)
 	{
 		HttpServer s = ((HttpServer)evt.getSource());
-		HttpRequest req = s.getRequest();
-		HttpResponse res = s.getResponse();
+		HttpRequest request = s.getRequest();
+		HttpResponse response = s.getResponse();
 		
-		if (req.getPath().equals("/haha.html"))
+		if (request.getHeader().getPath().equals("/haha.html"))
 		{
 			evt.cancel = true;
 
-			res.setStatusCode(200);
+			response.getHeader().setStatusCode(200);
 
 			String content = new String();
 			
-			Set<String> keys = req.getParamKeySet();
+			Set<String> keys = request.getHeader().getParamKeySet();
 			
 			for(String key : keys)
 			{
-				String value = req.getParam(key);
+				String value = request.getHeader().getParam(key);
 //				if (value != null)
 				{
 					content += key + " = " + value + "\n";
@@ -143,15 +143,15 @@ public class SocketListener implements RequestEventProcessor, Runnable
 			}
 			
 //			res.setContent(content, Charset.forName("ISO-8859-1"));
-			res.setContent(content, Charset.forName("UTF-8"));
+			response.setContent(content, Charset.forName("UTF-8"));
 //			res.setField("Content-Length", res.getContent().length + "");
 
-			res.makeHeader();
+			response.makeHeader();
 			try
 			{
 				System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
-				System.out.print(res.getHeader());
-				res.send(s.getSocket().getOutputStream());
+				System.out.print(response.getHeader().getText());
+				response.send(s.getSocket().getOutputStream());
 //				s.getSocket().close();
 			}
 			catch (IOException e)
