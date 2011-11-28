@@ -13,6 +13,12 @@ import java.util.regex.Matcher;
 public class BasicString
 {
 
+	/**
+	 * Convertit une chaîne de caractères échapés en tableau de bytes.
+	 * 
+	 * @param text la chaîne de caractères échapés à convertir
+	 * @return le tableau de bytes résultant de la conversion
+	 */
 	public static byte[] unescape(String text)
 	{
 		Pattern pHexByte = Pattern.compile("([^%]*)%([0123456789ABCDEF]{2})", Pattern.CASE_INSENSITIVE);
@@ -56,6 +62,15 @@ public class BasicString
 		return bytes;
 	}
 	
+	/**
+	 * Convertit une chaîne de caractères en dictionnaire.
+	 * 
+	 * @param in la chaîne à convertir
+	 * @param entrySep la séquence séparant les entrées du dictionnaire
+	 * @param keyValSep la séquence séparant les clés des valeurs
+	 * @param trim si vrai, les espaces devant et derrière les clés et les valeurs sont enlevés 
+	 * @return le dictionnaire résultant de la conversion
+	 */
 	public static Map<String, String> stringToMap(String in, String entrySep, String keyValSep, boolean trim)
 	{
 		HashMap<String, String> map = new HashMap<String, String>(); 
@@ -75,27 +90,35 @@ public class BasicString
 		return map;
 	}
 
-	//  Bits  Pattern
-	//  ----  -------
-	//    7   0xxxxxxx
-	//   11   110xxxxx 10xxxxxx
-	//   16   1110xxxx 10xxxxxx 10xxxxxx
-	//   21   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-	//   26   111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-	//   32   111111xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-	
+	/**
+	 * Indique si un tableau de bytes peut représenter une chaîne UTF-8 valide.
+	 * 
+	 * @param bytes le tableau de bytes à valider
+	 * @return vrai si le tableau de bytes peut représenter une chaîne UTF-8 valide 
+	 */
 	public static boolean isValidUtf8(byte[] bytes)
 	{
-		 int sLen;
-		 int n = 0;
+		//  Bits  Pattern
+		//  ----  -------
+		//    7   0xxxxxxx
+		//   11   110xxxxx 10xxxxxx
+		//   16   1110xxxx 10xxxxxx 10xxxxxx
+		//   21   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+		//   26   111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+		//   32   111111xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
 
-		 int[] UTF8len = 
-			 {
-				 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 6
-			 };
+		int sLen;
+		int n = 0;
+
+		// Indique la longueur d'une séquence UTF-8 en fonction  
+		// des six bits les plus significatifs du premier byte
+		int[] UTF8len = 
+			{
+				1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+				1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 6
+			};
 
 		while(n < bytes.length)
 		{
@@ -126,6 +149,12 @@ public class BasicString
 		return true;
 	}
 	
+	/**
+	 * Indique si un tableau de bytes peut représenter une chaîne ASCII valide.
+	 * 
+	 * @param bytes le tableau de bytes à valider
+	 * @return vrai si le tableau de bytes peut représenter une chaîne ASCII valide 
+	 */
 	public static boolean isAscii(byte[] bytes)
 	{
 		for(int i = 0; i < bytes.length; i++)
@@ -139,6 +168,13 @@ public class BasicString
 		return true;
 	}
 	
+	/**
+	 * Convertit un tableau de bytes en chaîne avec l'encodage spécifié.
+	 * 
+	 * @param bytes tableau de bytes à convertir
+	 * @param encoding encodage pour la conversion
+	 * @return chaîne résultant de la conversion
+	 */
 	public static String bytesToString(byte[] bytes, String encoding)
 	{
 		String str = null;
@@ -186,83 +222,185 @@ public class BasicString
 //		return latin1;
 //	}
 
+	/**
+	 * Convertit une chaîne en date.
+	 * 
+	 * @return la date résultant de la conversion
+	 */
 	public static String Date$()
 	{
 		String date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date());
 		return date;
 	}
 	
+	/**
+	 * Convertit une chaîne en date.
+	 * 
+	 * @return la date résultant de la conversion
+	 */
 	public static String date$()
 	{
 		return Date$();
 	}
 	
+	/**
+	 * Convertit une chaîne en heure.
+	 * 
+	 * @return l'heure résultant de la conversion
+	 */
 	public static String Time$()
 	{
 		String time = DateFormat.getTimeInstance(DateFormat.MEDIUM).format(new Date());
 		return time;
 	}
 	
+	/**
+	 * Convertit une chaîne en heure.
+	 * 
+	 * @return l'heure résultant de la conversion
+	 */
 	public static String time$()
 	{
 		return Time$();
 	}
 	
+    /**
+     * Convertit un nombre en chaîne.
+     * 
+     * @param n le nombre à convertir
+     * @return la chaîne résultant de la conversion
+     */
     public static String Str$(int n)
     {
           return "" + n;
     }
     
+    /**
+     * Convertit un nombre en chaîne.
+     * 
+     * @param n le nombre à convertir
+     * @return la chaîne résultant de la conversion
+     */
     public static String str$(int n)
     {
           return Str$(n);
     }
     
+    /**
+     * Convertit un nombre en chaîne.
+     * 
+     * @param n le nombre à convertir
+     * @return la chaîne résultant de la conversion
+     */
     public static String Str$(long n)
     {
           return "" + n;
     }
     
+    /**
+     * Convertit un nombre en chaîne.
+     * 
+     * @param n le nombre à convertir
+     * @return la chaîne résultant de la conversion
+     */
     public static String str$(long n)
     {
           return Str$(n);
     }
     
+    /**
+     * Retourne les n caractères de gauche de la chaîne d'entrée.
+     * 
+     * @param text la chaîne d'entrée
+     * @param length le nombre de caractères à prendre
+     * @return les n caractères de gauche de la chaîne d'entrée
+     */
     public static String Left$(final String text, int length)
     {
           return text.substring(0, length);
     }
     
+    /**
+     * Retourne les n caractères de gauche de la chaîne d'entrée.
+     * 
+     * @param text la chaîne d'entrée
+     * @param length le nombre de caractères à prendre
+     * @return les n caractères de gauche de la chaîne d'entrée
+     */
     public static String left$(final String text, int length)
     {
     	return Left$(text, length);
     }
 
+    /**
+     * Retourne les n caractères de droite de la chaîne d'entrée.
+     * 
+     * @param text la chaîne d'entrée
+     * @param length le nombre de caractères à prendre
+     * @return les n caractères de droite de la chaîne d'entrée
+     */
     public static String Right$(final String text, int length)
     {
           return text.substring(text.length() - length, text.length());
     }  
 
+    /**
+     * Retourne les n caractères de droite de la chaîne d'entrée.
+     * 
+     * @param text la chaîne d'entrée
+     * @param length le nombre de caractères à prendre
+     * @return les n caractères de droite de la chaîne d'entrée
+     */
     public static String right$(final String text, int length)
     {
     	return Right$(text, length);
     }
     
+    /**
+     * Retourne les n caractères de la chaîne d'entrée à partir de l'index spécifié.
+     * 
+     * @param text la chaîne d'entrée
+     * @param start index de départ (commence à 1)
+     * @param length le nombre de caractères à prendre
+     * @return les n caractères de la chaîne d'entrée à partir de l'index spécifié
+     */
     public static String Mid$(final String text, int start, int length)
     {
     	return text.substring(start - 1, start - 1 + length);
     }  
 
+    /**
+     * Retourne les n caractères de la chaîne d'entrée à partir de l'index spécifié.
+     * 
+     * @param text la chaîne d'entrée
+     * @param start index de départ (commence à 1)
+     * @param length le nombre de caractères à prendre
+     * @return les n caractères de la chaîne d'entrée à partir de l'index spécifié
+     */
     public static String mid$(final String text, int start, int length)
     {
     	return Mid$(text, start, length);
     }
 
+    /**
+     * Retourne tous les caractères de la chaîne d'entrée à partir de l'index spécifié.
+     * 
+     * @param text la chaîne d'entrée
+     * @param start index de départ (commence à 1)
+     * @return tous les caractères de la chaîne d'entrée à partir de l'index spécifié
+     */
     public static String Mid$(final String text, int start)
     {
           return text.substring(start - 1, text.length());
     }
     
+    /**
+     * Retourne tous les caractères de la chaîne d'entrée à partir de l'index spécifié.
+     * 
+     * @param text la chaîne d'entrée
+     * @param start index de départ (commence à 1)
+     * @return tous les caractères de la chaîne d'entrée à partir de l'index spécifié
+     */
     public static String mid$(final String text, int start)
     {
     	return Mid$(text, start);
