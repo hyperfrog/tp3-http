@@ -1,7 +1,10 @@
-package http;
+package http.server;
 
-import http.event.RequestEvent;
-import http.event.RequestEventProcessor;
+import http.common.HttpHeader;
+import http.common.HttpRequest;
+import http.common.HttpResponse;
+import http.server.event.RequestEvent;
+import http.server.event.RequestEventProcessor;
 
 import java.io.File;
 import java.io.IOException;

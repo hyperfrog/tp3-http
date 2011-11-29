@@ -1,4 +1,4 @@
-package http;
+package http.server;
 
 import static util.BasicString.stringToMap;
 
@@ -14,8 +14,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import http.event.RequestEvent;
-import http.event.RequestEventProcessor;
+import http.common.HttpRequest;
+import http.common.HttpResponse;
+import http.server.event.RequestEvent;
+import http.server.event.RequestEventProcessor;
 
 public class SocketListener implements RequestEventProcessor, Runnable
 {

@@ -1,6 +1,8 @@
-package http;
 
-public class MainApp
+
+import http.server.SocketListener;
+
+public class ServerApp
 {
 	private final static int DURATION = 0;
 	private final static String SERVER_PATH = "/C:/Users/Public/Documents/HTTP_Server/";
