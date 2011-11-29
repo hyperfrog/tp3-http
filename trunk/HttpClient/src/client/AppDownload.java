@@ -54,17 +54,24 @@ public class AppDownload
 	
 	public void startDownload(int pos)
 	{
-		if (pos >= 0 && pos <= this.downloadsList.size() && !this.downloadsList.get(pos).isAlive())
+		if (pos >= 0 && pos <= this.downloadsList.size())
 		{
-			this.downloadsList.get(pos).start();
+			if (!this.downloadsList.get(pos).isAlive())
+			{
+				this.downloadsList.get(pos).start();
+			}
+			else if (this.downloadsList.get(pos).isPaused())
+			{
+				this.downloadsList.get(pos).resumeDownload();
+			}
 		}
 	}
 	
 	public void stopDownload(int pos)
 	{
-		if (pos >= 0 && pos <= this.downloadsList.size()  && this.downloadsList.get(pos).isAlive())
+		if ((pos >= 0 && pos <= this.downloadsList.size())  && this.downloadsList.get(pos).isAlive())
 		{
-			this.downloadsList.get(pos).interrupt();
+			this.downloadsList.get(pos).pauseDownload();
 		}
 	}
 	

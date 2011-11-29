@@ -3,6 +3,7 @@ package client;
 public class DownloadThread extends Thread
 {
 	private String path;
+	private boolean paused = false;
 	private boolean done = false;
 	
 	public DownloadThread(String path)
@@ -16,7 +17,21 @@ public class DownloadThread extends Thread
 		// TODO : Faire quelque chose d'utile
 		while (!this.isDone())
 		{
-			System.out.println("[ " + this.path + " ] Downloading ...");
+			synchronized (this)
+			{
+				while (this.paused)
+				{
+					try
+					{
+						this.wait();
+					}
+					catch (Exception e)
+					{
+					}
+				}
+				
+				System.out.println("[ " + this.path + " ] Downloading ...");
+			}
 		}
 	}
 	
@@ -28,5 +43,25 @@ public class DownloadThread extends Thread
 	public boolean isDone()
 	{
 		return this.done;
+	}
+	
+	public void pauseDownload()
+	{
+		this.paused = true;
+	}
+
+	public void resumeDownload()
+	{
+		this.paused = false;
+		
+		synchronized (this)
+		{
+			this.notifyAll();
+		}
+	}
+	
+	public boolean isPaused()
+	{
+		return this.paused;
 	}
 }
