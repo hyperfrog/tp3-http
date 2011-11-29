@@ -146,7 +146,7 @@ public class HttpHeader
 	{
 		if (this.text != null) 
 		{
-			ArrayList<String> headerLines = split(this.text, "\n", true);
+			ArrayList<String> headerLines = split(this.text, "\r\n", true);
 
 			Pattern pFullRequest = Pattern.compile("\\A((GET)|(HEAD)|(POST)|(PUT)) (/[^ ]*) (HTTP/.+)\\Z");
 			Matcher mFullRequest = pFullRequest.matcher(headerLines.get(0));
