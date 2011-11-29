@@ -27,7 +27,6 @@ public class HttpServer implements Runnable
 	{
 		this.socket = client;
 		File file = new File(serverPath);
-
 		this.serverPath = file.isDirectory() ? file.getAbsolutePath() + "\\" : "";
 		this.siteRoot = siteRoot;
 		this.mimeTypes = mimeTypes;
@@ -40,36 +39,38 @@ public class HttpServer implements Runnable
 		{
 			this.request = new HttpRequest();
 			this.request.receiveHeader(this.socket.getInputStream());
+			HttpHeader requestHeader = this.request.getHeader();
 			
 			System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
-			System.out.print(this.request.getHeader().getText());
+			System.out.print(requestHeader.getText());
 
 			this.response = new HttpResponse();
+			HttpHeader responseHeader = this.response.getHeader();
 
-			RequestEvent evt = new RequestEvent(this, Thread.currentThread());
+			RequestEvent evt = new RequestEvent(this);
 			
 			this.evtProcessor.requestEventReceived(evt);
 
-			if (!evt.cancel && this.request.getHeader().getMethod().equals("GET")) 
+			if (!evt.cancel && requestHeader.getMethod().equals("GET")) 
 			{
 				this.response.setCacheable(true);
 
-				File f = new File(this.serverPath + this.siteRoot + this.request.getHeader().getPath());
+				File f = new File(this.serverPath + this.siteRoot + requestHeader.getPath());
 
 				if (f.exists()) 
 				{
 					this.response.setFileName(f.getAbsolutePath());
 					
 					// if dateTime1 is NOT earlier than dateTime2 -> 304 Not Modified
-					if (this.request.getHeader().getField("If-Modified-Since") != null 
-						&& !DateUtil.parseDate(this.request.getHeader().getField("If-Modified-Since")).before(
+					if (requestHeader.getField("If-Modified-Since") != null 
+						&& !DateUtil.parseDate(requestHeader.getField("If-Modified-Since")).before(
 							DateUtil.parseDate(DateUtil.formatDate(new Date(f.lastModified())))))
 					{
-						this.response.getHeader().setStatusCode(304);
+						responseHeader.setStatusCode(304);
 					}
 					else
 					{
-						this.response.getHeader().setStatusCode(200);
+						responseHeader.setStatusCode(200);
 
 						Pattern pFileExtension = Pattern.compile("\\.([^\\.]+)\\Z");
 						Matcher mFileExtension = pFileExtension.matcher(this.response.getFileName());
@@ -77,20 +78,20 @@ public class HttpServer implements Runnable
 						if (mFileExtension.find()) 
 						{
 							String fileMimeType = this.mimeTypes.get(mFileExtension.group(1));
-							this.response.getHeader().setField("Content-Type", fileMimeType);
+							responseHeader.setField("Content-Type", fileMimeType);
 						}
 
-						this.response.getHeader().setField("Cache-Control", "public");
-						this.response.getHeader().setField("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
-						this.response.getHeader().setField("Content-Length", f.length() + "");
+						responseHeader.setField("Cache-Control", "public");
+						responseHeader.setField("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
+						responseHeader.setField("Content-Length", f.length() + "");
 					}
 				}
 				else
 				{
-					this.response.getHeader().setStatusCode(404);
-					this.response.getHeader().setField("Content-Length", "0");
+					responseHeader.setStatusCode(404);
+					responseHeader.setField("Content-Length", "0");
 					
-					if (this.request.getHeader().accepts("text/html"))
+					if (requestHeader.accepts("text/html"))
 					{
 						File f404 = new File(this.serverPath + "error_404.htm");
 
@@ -98,14 +99,14 @@ public class HttpServer implements Runnable
 						{
 							this.response.setFileName(f404.getAbsolutePath());
 
-							this.response.getHeader().setField("Content-Type", "text/html");
-							this.response.getHeader().setField("Content-Length", f404.length() + "");
+							responseHeader.setField("Content-Type", "text/html");
+							responseHeader.setField("Content-Length", f404.length() + "");
 						}
 					}
 				}
 				this.response.makeHeader();
 				System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
-				System.out.print(this.response.getHeader().getText());
+				System.out.print(responseHeader.getText());
 				this.response.send(this.socket.getOutputStream());
 			}
 	        this.socket.close();

@@ -18,6 +18,8 @@ public class MainApp
 		Thread slt = new Thread(sl);
 		slt.start();
 		
+		System.out.println("Serveur démarré.");
+		
 		try
 		{
 			if (DURATION > 0)
@@ -35,6 +37,8 @@ public class MainApp
 		{
 			e.printStackTrace();
 		}
+
+		System.out.println("Serveur arrêté.");
 	}
 }
 
