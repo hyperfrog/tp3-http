@@ -1,7 +1,7 @@
 /**
  * 
  */
-package http;
+package http.common;
 
 import static util.BasicString.bytesToString;
 import static util.BasicString.isAscii;
