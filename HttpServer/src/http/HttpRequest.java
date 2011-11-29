@@ -26,7 +26,7 @@ public class HttpRequest
 		do
 		{
 			line = in.readLine();
-			requestHeader += line + "\n";
+			requestHeader += line + "\r\n";
 
 		} while (line != null && !line.isEmpty());
 
