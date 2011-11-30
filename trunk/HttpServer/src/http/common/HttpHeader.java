@@ -9,6 +9,8 @@ import static util.BasicString.isValidUtf8;
 import static util.BasicString.split;
 import static util.BasicString.unescape;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -83,9 +85,6 @@ public class HttpHeader
 	// Protocole utilisé (HTTP/1.x)
 	private String protocol;
 
-	// URL de la ressource (p. ex. http://utilisateur:motdepasse@www.serveur.org:80/dossier/fichier.html?p1=oui&p2=bof)
-	private String url;
-	
 	// Chemin complet de la ressource (p. ex. /dossier/fichier.html?p1=oui&p2=bof)
 	private String fullPath;
 	
@@ -147,7 +146,19 @@ public class HttpHeader
 	
 	public boolean makeRequestHeader()
 	{
-			this.text = String.format("%s %s %s\r\n", this.method , this.fullPath, this.protocol);
+		
+			String path = (this.fullPath == null || this.fullPath.isEmpty()) ? this.path : this.fullPath;
+			
+			/* TODO: Si this.parameters n'est pas vide et que path ne contient pas de paramètres,
+			 * il faudrait ajouter les paramètres du dictionnaire au path
+			 */
+			
+			if (path == null || path.isEmpty() || this.method == null || this.method.isEmpty() || this.protocol == null || this.protocol.isEmpty())
+			{
+				return false;
+			}
+		
+			this.text = String.format("%s %s %s\r\n", this.method , path, this.protocol);
 
 			for (String field : this.fields.keySet())
 			{
@@ -157,35 +168,6 @@ public class HttpHeader
 			
 			return true;
 	}
-
-	public boolean makeRequestHeader(String url)
-	{
-			this.text = String.format("%s %s %s\r\n", this.method , this.fullPath, this.protocol);
-
-			for (String field : this.fields.keySet())
-			{
-				this.text += String.format("%s: %s\r\n", field, this.fields.get(field));
-			}
-			this.text += "\r\n";
-			
-			return true;
-	}
-	
-	private boolean parseUrl()
-	{
-		// http://utilisateur:motdepasse@www.serveur.org:80/dossier/fichier.html?p1=oui&p2=bof
-		
-		
-		Pattern pFullUrl = Pattern.compile("\\A([^:])://([^/])(/[^\\?])\\??(.*)\\Z");
-		Matcher mFullUrl = pFullUrl.matcher(this.url);
-		
-		
-		
-		return true;
-
-	}
-
-	
 	
 	public void parseRequestHeader()
 	{

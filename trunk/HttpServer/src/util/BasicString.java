@@ -63,7 +63,7 @@ public class BasicString
 	}
 	
 	/**
-	 * Convertit une chaîne de caractères en dictionnaire.
+	 * Convertit une chaîne de caractères en dictionnaire de <String, String>.
 	 * 
 	 * @param in la chaîne à convertir
 	 * @param entrySep la séquence séparant les entrées du dictionnaire
@@ -88,6 +88,26 @@ public class BasicString
 			}
 		}
 		return map;
+	}
+	
+	/**
+	 * Convertit un dictionnaire de <String, String> en chaîne de caractères.
+	 * 
+	 * @param in le dictionnaire à convertir 
+	 * @param entrySep la séquence séparant les entrées du dictionnaire
+	 * @param keyValSep la séquence séparant les clés des valeurs
+	 * @return la chaîne résultant de la conversion
+	 */
+	public static String mapToString(Map<String, String> in, String entrySep, String keyValSep)
+	{
+		String out = new String();
+		
+		for (Map.Entry<String, String> e : in.entrySet())
+		{
+			out += e.getKey() + keyValSep + e.getValue() + entrySep;
+		}
+
+		return out.substring(0, Math.max(0, out.length() - entrySep.length()));
 	}
 
 	/**

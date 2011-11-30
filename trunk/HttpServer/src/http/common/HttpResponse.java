@@ -16,6 +16,9 @@ public class HttpResponse
 	private String fileName;
 	private boolean isCacheable;
 	
+	/**
+	 * Construit une réponse HTTP.
+	 */
 	public HttpResponse()
 	{
 		this.header = new HttpHeader();
@@ -28,11 +31,23 @@ public class HttpResponse
 		this.isCacheable = true;
 	}
 
+	/**
+	 * Fabrique un header HTTP pour la réponse.
+	 * 
+	 * @return vrai si le header a pu être fabriqué, faux sinon
+	 */
 	public boolean makeHeader()
 	{
 		return this.header.makeResponseHeader(this.isCacheable);
 	}
 	
+	/**
+	 * Envoie la réponse HTTP dans la stream de sortie passée en paramètre. 
+	 * 
+	 * @param os stream de sortie
+	 * @return vrai si la réponse a été envoyée avec succès, faux sinon
+	 * @throws IOException
+	 */
 	public boolean send(OutputStream os) throws IOException
 	{
 		if (this.header.getText() == null || this.header.getText().isEmpty())
