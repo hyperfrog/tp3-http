@@ -1,9 +1,8 @@
-package http.client.model;
+package http.client;
 
 import java.util.List;
 import javax.swing.table.AbstractTableModel;
 
-import http.client.DownloadThread;
 
 public class DownloadTableModel extends AbstractTableModel
 {
