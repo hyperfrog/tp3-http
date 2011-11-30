@@ -13,7 +13,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 
-import http.client.model.DownloadTableModel;
 
 public class AppFrame extends JFrame implements ActionListener
 {
