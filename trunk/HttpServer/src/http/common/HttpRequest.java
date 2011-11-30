@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 
 public class HttpRequest
 {
@@ -32,6 +34,23 @@ public class HttpRequest
 
 		this.header.setText(requestHeader);
 		this.header.parseRequestHeader();
+	}
+	
+	public boolean send(OutputStream os) throws IOException
+	{
+		if (this.header.getText() == null || this.header.getText().isEmpty())
+		{
+			if (!this.header.makeRequestHeader())
+			{
+				return false;
+			}
+		}
+
+		OutputStreamWriter osw = new OutputStreamWriter(os);
+
+		osw.write(this.header.getText());
+		osw.flush();
+		return true;
 	}
 	
 	/**

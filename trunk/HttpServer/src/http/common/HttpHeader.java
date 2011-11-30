@@ -83,6 +83,9 @@ public class HttpHeader
 	// Protocole utilisé (HTTP/1.x)
 	private String protocol;
 
+	// URL de la ressource (p. ex. http://utilisateur:motdepasse@www.serveur.org:80/dossier/fichier.html?p1=oui&p2=bof)
+	private String url;
+	
 	// Chemin complet de la ressource (p. ex. /dossier/fichier.html?p1=oui&p2=bof)
 	private String fullPath;
 	
@@ -141,6 +144,48 @@ public class HttpHeader
 		}
 		return false;
 	}
+	
+	public boolean makeRequestHeader()
+	{
+			this.text = String.format("%s %s %s\r\n", this.method , this.fullPath, this.protocol);
+
+			for (String field : this.fields.keySet())
+			{
+				this.text += String.format("%s: %s\r\n", field, this.fields.get(field));
+			}
+			this.text += "\r\n";
+			
+			return true;
+	}
+
+	public boolean makeRequestHeader(String url)
+	{
+			this.text = String.format("%s %s %s\r\n", this.method , this.fullPath, this.protocol);
+
+			for (String field : this.fields.keySet())
+			{
+				this.text += String.format("%s: %s\r\n", field, this.fields.get(field));
+			}
+			this.text += "\r\n";
+			
+			return true;
+	}
+	
+	private boolean parseUrl()
+	{
+		// http://utilisateur:motdepasse@www.serveur.org:80/dossier/fichier.html?p1=oui&p2=bof
+		
+		
+		Pattern pFullUrl = Pattern.compile("\\A([^:])://([^/])(/[^\\?])\\??(.*)\\Z");
+		Matcher mFullUrl = pFullUrl.matcher(this.url);
+		
+		
+		
+		return true;
+
+	}
+
+	
 	
 	public void parseRequestHeader()
 	{
