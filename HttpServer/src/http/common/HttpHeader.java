@@ -169,8 +169,10 @@ public class HttpHeader
 			return true;
 	}
 	
-	public void parseRequestHeader()
+	public boolean parseRequestHeader()
 	{
+		boolean success = false;
+		
 		if (this.text != null) 
 		{
 			ArrayList<String> headerLines = split(this.text, "\r\n", true);
@@ -209,9 +211,16 @@ public class HttpHeader
 				if (headerLines.size() > 1)
 				{
 					this.parseFields(headerLines.subList(1, headerLines.size()));
+					
+					if (this.fields.containsKey("Host"))
+					{
+						success = true;
+					}
 				}
 			}
 		}
+		
+		return success;
 	}
 	
 	private void parseFields(List<String> fieldLines)

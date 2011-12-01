@@ -10,13 +10,20 @@ import java.io.OutputStreamWriter;
 public class HttpRequest
 {
 	private HttpHeader header;
-	private byte[] content; // Pas utilisé; servirait si la méthode POST était implémentée
+	private byte[] content; // Pas utilisé, mais servirait si la méthode POST était implémentée
 
+	/**
+	 * 
+	 */
 	public HttpRequest()
 	{
 		this.header = new HttpHeader();
 	}
 
+	/**
+	 * @param is
+	 * @throws IOException
+	 */
 	public void receiveHeader(InputStream is) throws IOException
 	{
 		BufferedReader in = new BufferedReader(new InputStreamReader(is));
@@ -33,9 +40,14 @@ public class HttpRequest
 		} while (line != null && !line.isEmpty());
 
 		this.header.setText(requestHeader);
-		this.header.parseRequestHeader();
+//		this.header.parseRequestHeader();
 	}
 	
+	/**
+	 * @param os
+	 * @return
+	 * @throws IOException
+	 */
 	public boolean send(OutputStream os) throws IOException
 	{
 		if (this.header.getText() == null || this.header.getText().isEmpty())
