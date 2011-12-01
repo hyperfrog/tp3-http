@@ -14,7 +14,6 @@ public class AppDownload
 	
 	public boolean addDownload(String url)
 	{
-		// TODO : Validation de l'url ?
 		DownloadThread dl = new DownloadThread(url);
 		return this.downloadsList.add(dl); 
 	}

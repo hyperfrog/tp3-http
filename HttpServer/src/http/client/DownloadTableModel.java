@@ -39,7 +39,7 @@ public class DownloadTableModel extends AbstractTableModel
 			switch (col)
 			{
 			case 0:
-				value = dl.getPath();
+				value = dl.getId();
 				break;
 			case 1:
 				value = dl.isDone();
