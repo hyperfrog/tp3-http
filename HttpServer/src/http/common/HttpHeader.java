@@ -397,6 +397,22 @@ public class HttpHeader
 	}
 
 	/**
+	 * @param method the method to set
+	 */
+	public void setMethod(String method)
+	{
+		this.method = method;
+	}
+
+	/**
+	 * @param fullPath the fullPath to set
+	 */
+	public void setFullPath(String fullPath)
+	{
+		this.fullPath = fullPath;
+	}
+
+	/**
 	 * @return the path
 	 */
 	public String getPath()
