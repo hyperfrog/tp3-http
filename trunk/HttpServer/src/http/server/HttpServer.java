@@ -26,7 +26,14 @@ public class HttpServer implements Runnable
 	private HttpRequest request;
 	private HttpResponse response;
 	
-	HttpServer(Socket client, String serverPath, String siteRoot, Map<String, String> mimeTypes, RequestEventProcessor ep)
+	/**
+	 * @param client
+	 * @param serverPath
+	 * @param siteRoot
+	 * @param mimeTypes
+	 * @param ep
+	 */
+	public HttpServer(Socket client, String serverPath, String siteRoot, Map<String, String> mimeTypes, RequestEventProcessor ep)
 	{
 		this.socket = client;
 		File file = new File(serverPath);
@@ -36,83 +43,111 @@ public class HttpServer implements Runnable
 		this.evtProcessor = ep;
 	}
 
+	/* (non-Javadoc)
+	 * @see java.lang.Runnable#run()
+	 */
 	public void run()
 	{
 		try
 		{
+			// Crée une requête d'entrée
 			this.request = new HttpRequest();
+			// Attend de recevoir un header pour la requête
 			this.request.receiveHeader(this.socket.getInputStream());
 			HttpHeader requestHeader = this.request.getHeader();
 			
+			// Tente de parser le header
+			boolean requestIsGood = requestHeader.parseRequestHeader();
+			
 			System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
 			System.out.print(requestHeader.getText());
-
+			
 			this.response = new HttpResponse();
 			HttpHeader responseHeader = this.response.getHeader();
 
-			RequestEvent evt = new RequestEvent(this);
-			
-			this.evtProcessor.requestEventReceived(evt);
-
-			if (!evt.cancel && requestHeader.getMethod().equals("GET")) 
+			// Si la requête est bien formée
+			if (requestIsGood)
 			{
-				this.response.setCacheable(true);
+				// Envoie l'évènement de requête reçue
+				RequestEvent evt = new RequestEvent(this);
+				this.evtProcessor.requestEventReceived(evt);
 
-				File f = new File(this.serverPath + this.siteRoot + requestHeader.getPath());
-
-				if (f.exists()) 
+				// Si l'évènement n'a pas été annulé 
+				if (!evt.cancel) 
 				{
-					this.response.setFileName(f.getAbsolutePath());
-					
-					// if dateTime1 is NOT earlier than dateTime2 -> 304 Not Modified
-					if (requestHeader.getField("If-Modified-Since") != null 
-						&& !DateUtil.parseDate(requestHeader.getField("If-Modified-Since")).before(
-							DateUtil.parseDate(DateUtil.formatDate(new Date(f.lastModified())))))
+					// Si la requête utilise la méthode GET 
+					if (requestHeader.getMethod().equals("GET"))
 					{
-						responseHeader.setStatusCode(304);
-					}
-					else
-					{
-						responseHeader.setStatusCode(200);
+						// La réponse sera «cachable» puisqu'on s'apprête à servir un fichier du système de fichiers 
+						this.response.setCacheable(true);
 
-						Pattern pFileExtension = Pattern.compile("\\.([^\\.]+)\\Z");
-						Matcher mFileExtension = pFileExtension.matcher(this.response.getFileName());
+						File f = new File(this.serverPath + this.siteRoot + requestHeader.getPath());
 
-						if (mFileExtension.find()) 
+						if (f.exists()) 
 						{
-							String fileMimeType = this.mimeTypes.get(mFileExtension.group(1));
-							responseHeader.setField("Content-Type", fileMimeType);
-						}
+							this.response.setFileName(f.getAbsolutePath());
 
-						responseHeader.setField("Cache-Control", "public");
-						responseHeader.setField("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
-						responseHeader.setField("Content-Length", f.length() + "");
+							// If dateTime1 is NOT earlier than dateTime2 -> 304 Not Modified
+							if (requestHeader.getField("If-Modified-Since") != null 
+									&& !DateUtil.parseDate(requestHeader.getField("If-Modified-Since")).before(
+											DateUtil.parseDate(DateUtil.formatDate(new Date(f.lastModified())))))
+							{
+								responseHeader.setStatusCode(304);
+							}
+							else
+							{
+								responseHeader.setStatusCode(200); // OK
+
+								Pattern pFileExtension = Pattern.compile("\\.([^\\.]+)\\Z");
+								Matcher mFileExtension = pFileExtension.matcher(this.response.getFileName());
+
+								if (mFileExtension.find()) 
+								{
+									String fileMimeType = this.mimeTypes.get(mFileExtension.group(1));
+									responseHeader.setField("Content-Type", fileMimeType);
+								}
+
+								responseHeader.setField("Cache-Control", "public");
+								responseHeader.setField("Last-Modified", DateUtil.formatDate(new Date(f.lastModified())));
+								responseHeader.setField("Content-Length", f.length() + "");
+							}
+						}
+						else
+						{
+							responseHeader.setStatusCode(404); // Not Found
+							responseHeader.setField("Content-Length", "0");
+
+							if (requestHeader.accepts("text/html"))
+							{
+								File f404 = new File(this.serverPath + "error_404.htm");
+
+								if (f404.exists())
+								{
+									this.response.setFileName(f404.getAbsolutePath());
+
+									responseHeader.setField("Content-Type", "text/html");
+									responseHeader.setField("Content-Length", f404.length() + "");
+								}
+							}
+						}
 					}
 				}
-				else
-				{
-					responseHeader.setStatusCode(404);
-					responseHeader.setField("Content-Length", "0");
-					
-					if (requestHeader.accepts("text/html"))
-					{
-						File f404 = new File(this.serverPath + "error_404.htm");
-
-						if (f404.exists())
-						{
-							this.response.setFileName(f404.getAbsolutePath());
-
-							responseHeader.setField("Content-Type", "text/html");
-							responseHeader.setField("Content-Length", f404.length() + "");
-						}
-					}
-				}
-				this.response.makeHeader();
+			}
+			else
+			{
+				responseHeader.setStatusCode(400); // Bad Request
+			}
+			
+			// Si capable de créer le header
+			if (this.response.makeHeader())
+			{
 				System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
 				System.out.print(responseHeader.getText());
+
+				// Envoie la réponse
 				this.response.send(this.socket.getOutputStream());
 			}
-	        this.socket.close();
+			this.socket.close();
 		}
 		catch (IOException e)
 		{
