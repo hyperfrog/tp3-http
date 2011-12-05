@@ -78,9 +78,9 @@ public class HttpServer implements Runnable
 					// Si la requête utilise la méthode GET 
 					if (requestHeader.getMethod().equals("GET") || requestHeader.getMethod().equals("HEAD"))
 					{
-						if (requestHeader.getMethod().equals("GET"))
+						if (requestHeader.getMethod().equals("HEAD"))
 						{
-							this.response.setContentSendable(true);
+							this.response.setContentSendable(false);
 						}
 						
 						// La réponse sera «cachable» puisqu'on s'apprête à servir un fichier du système de fichiers 
@@ -122,7 +122,7 @@ public class HttpServer implements Runnable
 							responseHeader.setStatusCode(404); // Not Found
 							responseHeader.setField("Content-Length", "0");
 
-							if (requestHeader.accepts("text/html"))
+//							if (requestHeader.accepts("text/html"))
 							{
 								File f404 = new File(this.serverPath + "error_404.htm");
 
@@ -136,11 +136,43 @@ public class HttpServer implements Runnable
 							}
 						}
 					}
+					else // POST, PUT, DELETE, TRACE, OPTIONS, CONNECT, PATCH
+					{
+						responseHeader.setStatusCode(501); // Not Implemented
+						responseHeader.setField("Content-Length", "0");
+						
+//						if (requestHeader.accepts("text/html"))
+						{
+							File f501 = new File(this.serverPath + "error_501.htm");
+
+							if (f501.exists())
+							{
+								this.response.setFileName(f501.getAbsolutePath());
+
+								responseHeader.setField("Content-Type", "text/html");
+								responseHeader.setField("Content-Length", f501.length() + "");
+							}
+						}						
+					}
 				}
 			}
 			else
 			{
 				responseHeader.setStatusCode(400); // Bad Request
+				responseHeader.setField("Content-Length", "0");
+				
+//				if (requestHeader.accepts("text/html"))
+				{
+					File f400 = new File(this.serverPath + "error_400.htm");
+
+					if (f400.exists())
+					{
+						this.response.setFileName(f400.getAbsolutePath());
+
+						responseHeader.setField("Content-Type", "text/html");
+						responseHeader.setField("Content-Length", f400.length() + "");
+					}
+				}						
 			}
 			
 			// Si capable de créer le header

@@ -29,8 +29,8 @@ public class HttpResponse
 		this.header.setStatusCode(0);
 		this.header.setField("Server", "CLES 0.1");
 		this.header.setField("Connection", "close");
-		this.isCacheable = false;
-		this.contentSendable = false;
+		this.isCacheable = true;
+		this.contentSendable = true;
 	}
 
 	/**

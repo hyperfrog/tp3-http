@@ -177,14 +177,14 @@ public class HttpHeader
 		{
 			ArrayList<String> headerLines = split(this.text, "\r\n", true);
 
-			Pattern pFullRequest = Pattern.compile("\\A((GET)|(HEAD)|(POST)|(PUT)) (/[^ ]*) (HTTP/.+)\\Z");
+			Pattern pFullRequest = Pattern.compile("\\A(HEAD|GET|POST|PUT|DELETE|TRACE|OPTIONS|CONNECT|PATCH) (/[^ ]*) (HTTP/.+)\\Z");
 			Matcher mFullRequest = pFullRequest.matcher(headerLines.get(0));
 
 			if (mFullRequest.find()) 
 			{
 				this.method = mFullRequest.group(1);
-				this.protocol = mFullRequest.group(7);
-				this.fullPath = mFullRequest.group(6);
+				this.fullPath = mFullRequest.group(2);
+				this.protocol = mFullRequest.group(3);
 
 				ArrayList<String> fullPathParts = split(this.fullPath, "?");
 
@@ -199,7 +199,6 @@ public class HttpHeader
 					this.path = bytesToString(pathBytes, DEFAULT_URL_ENCODING);
 				}
 
-//				if (this.method.equals("GET"))
 				if (fullPathParts.size() > 1)
 				{
 					this.parseGetParams(fullPathParts.get(1));
@@ -208,11 +207,16 @@ public class HttpHeader
 				// Remplace les / par des \ 
 //				this.pathName = join(split(this.pathName, "/"), "\\");
 
+				if (this.protocol.equals("HTTP/1.0"))
+				{
+					success = true;
+				}
+				
 				if (headerLines.size() > 1)
 				{
 					this.parseFields(headerLines.subList(1, headerLines.size()));
 					
-					if (this.fields.containsKey("Host"))
+					if (this.protocol.equals("HTTP/1.1") && this.fields.containsKey("Host"))
 					{
 						success = true;
 					}
