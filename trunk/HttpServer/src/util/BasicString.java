@@ -440,24 +440,27 @@ public class BasicString
 	{
 		ArrayList<String> list = new ArrayList<String>();
 
-		int from = 0;
-		int upTo = 0;
-		
-		while (upTo > -1)
+		if (s != null)
 		{
-			upTo = s.indexOf(d, from);
+			int from = 0;
+			int upTo = 0;
 
-			if (upTo > -1)
+			while (upTo > -1)
 			{
-				if (!combine || upTo - from > 0)
+				upTo = s.indexOf(d, from);
+
+				if (upTo > -1)
 				{
-					list.add(s.substring(from, upTo));
+					if (!combine || upTo - from > 0)
+					{
+						list.add(s.substring(from, upTo));
+					}
+					from = upTo + d.length();
 				}
-				from = upTo + d.length();
-			}
-			else if (!combine || s.length() - from > 0)
-			{
-				list.add(s.substring(from, s.length()));
+				else if (!combine || s.length() - from > 0)
+				{
+					list.add(s.substring(from, s.length()));
+				}
 			}
 		}
 		
