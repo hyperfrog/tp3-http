@@ -15,6 +15,7 @@ public class HttpResponse
 	private byte[] content;
 	private String fileName;
 	private boolean isCacheable;
+	private boolean contentSendable;
 	
 	/**
 	 * Construit une réponse HTTP.
@@ -28,7 +29,8 @@ public class HttpResponse
 		this.header.setStatusCode(0);
 		this.header.setField("Server", "CLES 0.1");
 		this.header.setField("Connection", "close");
-		this.isCacheable = true;
+		this.isCacheable = false;
+		this.contentSendable = false;
 	}
 
 	/**
@@ -63,7 +65,7 @@ public class HttpResponse
 		osw.write(this.header.getText());
 		osw.flush();
 
-		if (this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
+		if (this.contentSendable && this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
 		{
 			if (this.content == null )
 			{
@@ -163,4 +165,22 @@ public class HttpResponse
 	{
 		this.isCacheable = isCacheable;
 	}
+
+	/**
+	 * @return the sendContent
+	 */
+	public boolean isContentSendable()
+	{
+		return contentSendable;
+	}
+
+	/**
+	 * @param contentSendable the sendContent to set
+	 */
+	public void setContentSendable(boolean contentSendable)
+	{
+		this.contentSendable = contentSendable;
+	}
+	
+	
 }

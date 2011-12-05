@@ -76,8 +76,13 @@ public class HttpServer implements Runnable
 				if (!evt.cancel) 
 				{
 					// Si la requête utilise la méthode GET 
-					if (requestHeader.getMethod().equals("GET"))
+					if (requestHeader.getMethod().equals("GET") || requestHeader.getMethod().equals("HEAD"))
 					{
+						if (requestHeader.getMethod().equals("GET"))
+						{
+							this.response.setContentSendable(true);
+						}
+						
 						// La réponse sera «cachable» puisqu'on s'apprête à servir un fichier du système de fichiers 
 						this.response.setCacheable(true);
 
