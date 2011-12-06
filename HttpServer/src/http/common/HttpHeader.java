@@ -76,7 +76,7 @@ public abstract class HttpHeader
 	// Protocole utilisé (HTTP/1.x)
 	protected String protocol;
 
-	// Dictionnaire des champs supplémentaires
+	// Dictionnaire des champs obligatoires et optionnels
 	protected Map<String, String> fields;
 	
 	/**
@@ -90,7 +90,16 @@ public abstract class HttpHeader
 		this.fields = new HashMap<String, String>();
 	}
 	
+	/**
+	 * @return
+	 */
 	public abstract boolean parse();
+	
+	/**
+	 * Fabrique un header HTTP pour la requête ou la réponse.
+	 * 
+	 * @return vrai si le header a pu être fabriqué, faux sinon
+	 */
 	public abstract boolean make();
 	
 	/**
@@ -122,18 +131,17 @@ public abstract class HttpHeader
 	 */
 	public boolean send(OutputStream os) throws IOException
 	{
-		if (this.text != null)
-		{
-			OutputStreamWriter osw = new OutputStreamWriter(os);
-
-			osw.write(this.text);
-			osw.flush();
-			return true;
-		}
-		else
+		if ((this.text == null || this.text.isEmpty()) && !this.make())
 		{
 			return false;
 		}
+
+		OutputStreamWriter osw = new OutputStreamWriter(os);
+
+		osw.write(this.text);
+		osw.flush();
+		
+		return true;
 	}
 	
 	protected void parseFields(List<String> fieldLines)

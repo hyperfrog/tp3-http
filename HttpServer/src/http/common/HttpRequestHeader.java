@@ -55,22 +55,8 @@ public class HttpRequestHeader extends HttpHeader
 	}
 	
 	/* (non-Javadoc)
-	 * @see http.common.HttpHeader#send(java.io.OutputStream)
+	 * @see http.common.HttpHeader#make()
 	 */
-	@Override
-	public boolean send(OutputStream os) throws IOException
-	{
-		if (this.text == null || this.text.isEmpty())
-		{
-			if (!this.make())
-			{
-				return false;
-			}
-		}
-
-		return super.send(os);
-	}
-	
 	public boolean make()
 	{
 		
@@ -96,6 +82,9 @@ public class HttpRequestHeader extends HttpHeader
 			return true;
 	}
 	
+	/* (non-Javadoc)
+	 * @see http.common.HttpHeader#parse()
+	 */
 	public boolean parse()
 	{
 		boolean success = false;
