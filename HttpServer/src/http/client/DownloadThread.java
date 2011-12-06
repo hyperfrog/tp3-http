@@ -1,53 +1,67 @@
 package http.client;
 
-import java.io.FileOutputStream;
+import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 
+import http.common.HttpHeader;
 import http.common.HttpRequest;
 import http.common.HttpResponse;
 
 public class DownloadThread extends Thread
 {
+	public static enum DownloadState {NEW, DOWNLOADING, WAITING, ERROR, NOT_FOUND};
+	
 	private static final String USER_AGENT = "HttpClient Downloader";
-	private static final int KB_PER_SECOND = 50;
+	private static final long RETRY_WAIT_TIME = 5000;
 	
 	private Socket socket = null;
 	private HttpRequest request;
 	private HttpResponse response;
-	
-	private String fileName;
-	
-	private boolean paused = false;
+	private URL path;
 	private boolean done = false;
 	
-	public DownloadThread(String path)
+	private String savePath;
+	private String fileName;
+	private String extName;
+	
+	private String urlName;
+	private int fileSize;
+	private DownloadState currentState;
+	
+	public DownloadThread(URL path, String savePath)
+	{
+		this.path = path;
+		this.urlName = path.toExternalForm();
+		this.currentState = DownloadState.NEW;
+		this.fileName = path.getPath().substring(path.getPath().lastIndexOf("/") + 1, path.getPath().lastIndexOf("."));
+		this.extName = path.getPath().substring(path.getPath().lastIndexOf(".") + 1, path.getPath().length());
+		this.savePath = savePath;
+		
+		this.buildRequest();
+		this.openConnection();
+	}
+	
+	// Construit la requête pour tenter de récupérer le fichier demandé
+	private void buildRequest()
+	{
+		this.request = new HttpRequest();
+		this.request.getHeader().setMethod("GET");
+		this.request.getHeader().setFullPath(this.path.getFile());
+		this.request.getHeader().setProtocol("HTTP/1.1");
+		
+		this.request.getHeader().setField("Host", this.path.getHost());
+		this.request.getHeader().setField("User-Agent", DownloadThread.USER_AGENT);
+		this.request.getHeader().setField("Accept", "*/*");
+	}
+	
+	private void openConnection()
 	{
 		try
 		{
-			URL url = new URL(path);
-			
-			// TODO : Temporaire
-			this.fileName = url.getPath().substring(url.getPath().lastIndexOf("/") + 1, url.getPath().length());
-			System.out.println(this.fileName);
-			
-			this.request = new HttpRequest();
-			this.request.getHeader().setMethod("GET");
-			this.request.getHeader().setFullPath(url.getFile());
-			this.request.getHeader().setProtocol("HTTP/1.1");
-			
-			this.request.getHeader().setField("Host", url.getHost());
-			this.request.getHeader().setField("User-Agent", DownloadThread.USER_AGENT);
-			this.request.getHeader().setField("Accept", "*/*");
-			
-			this.socket = new Socket(url.getHost(), (url.getPort() != -1) ? url.getPort() : url.getDefaultPort());
-		}
-		catch (MalformedURLException e)
-		{
-			e.printStackTrace();
+			this.socket = new Socket(this.path.getHost(), (this.path.getPort() != -1) ? this.path.getPort() : this.path.getDefaultPort());
 		}
 		catch (UnknownHostException e)
 		{
@@ -64,54 +78,88 @@ public class DownloadThread extends Thread
 	{
 		try
 		{
-			if (this.request.send(this.socket.getOutputStream()))
+			boolean retry = true;
+			
+			do
 			{
-				// TODO : Ne fonctionne pas ... et je ne comprends pas pourquoi ...
-				FileOutputStream fos = new FileOutputStream("C:\\Test\\" + this.fileName);
-					
-				byte[] buf = new byte[1024];
-				int len;
-
-				while ((len = this.socket.getInputStream().read(buf)) > 0)
+				if (retry)
 				{
-					System.out.println("Downloading...");
-
-					fos.write(buf, 0, len);
-
-					try
+					this.openConnection();
+				}
+				
+				if (this.request.send(this.socket.getOutputStream()))
+				{
+					// Attend de recevoir un header pour la réponse
+					this.response = new HttpResponse();
+					this.response.receiveHeader(this.socket.getInputStream());
+					HttpHeader responseHeader = this.response.getHeader();
+					
+					// Tente de parser le header
+					// TODO : Probleme dans le parsing ...
+					boolean requestIsGood = responseHeader.parseRequestHeader();
+					
+					System.out.println(String.format("[D] Thread %d (Réponse)", Thread.currentThread().getId()));
+					System.out.print(responseHeader.getText());
+					
+					// Si la requête est bien formée
+					if (requestIsGood)
 					{
-						Thread.sleep(1000/KB_PER_SECOND);
-					}
-					catch (InterruptedException e)
-					{
-						e.printStackTrace();
+						this.fileSize = Integer.parseInt(responseHeader.getField("Content-Length"));
+						
+						System.out.println(String.format("Taille du fichier : %d", this.fileSize));
+						
+						File f = new File(this.savePath + this.fileName + "." + this.extName);
+						System.out.println(String.format("t1 : %s", f.getAbsoluteFile()));
+						System.out.println(String.format("t2 : %s", f.getAbsolutePath()));
+						
+						if (f.exists())
+						{
+							int i = 1;
+							while (f.exists())
+							{
+								f.renameTo(new File(this.savePath + this.fileName + " (" + i + ")." + this.extName));
+								i++;
+							}
+						}
+						
+						this.response.setFileName(f.getAbsolutePath());
+							
+						// TODO : Verif Code + file exist on server
+						
+						this.response.read(this.socket.getInputStream());
+							
+						System.out.println(String.format("Download succeed. Saved : %s", f.getAbsoluteFile()));
+						retry = false;
 					}
 				}
-
-				fos.close();
+				
+				if (retry)
+				{
+					System.out.println(String.format("Failed request. Retrying in %d seconds...", DownloadThread.RETRY_WAIT_TIME / 1000));
+					
+					this.sleepFor(DownloadThread.RETRY_WAIT_TIME);
+				}
+				
+				this.closeConnection();
 			}
+			while (retry);
 		}
 		catch (IOException e)
 		{
 			e.printStackTrace();
 		}
-		
-//		while (!this.isDone())
-//		{
-//			synchronized (this)
-//			{
-//				while (this.paused)
-//				{
-//					try
-//					{
-//						this.wait();
-//					}
-//					catch (Exception e)
-//					{
-//					}
-//				}
-//			}
-//		}
+	}
+	
+	public void closeConnection()
+	{
+		try
+		{
+			this.socket.close();
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
 	}
 	
 	public boolean isDone()
@@ -119,23 +167,38 @@ public class DownloadThread extends Thread
 		return this.done;
 	}
 	
-	public void pauseDownload()
+	public String getUrl()
 	{
-		this.paused = true;
+		return this.urlName;
 	}
-
-	public void resumeDownload()
+	
+	public int getSize()
 	{
-		this.paused = false;
-		
-		synchronized (this)
+		return this.fileSize;
+	}
+	
+	public void setCurrentState(DownloadState newState)
+	{
+		if (newState != null)
 		{
-			this.notifyAll();
+			this.currentState = newState;
 		}
 	}
 	
-	public boolean isPaused()
+	public DownloadState getCurrentState()
 	{
-		return this.paused;
+		return this.currentState;
+	}
+	
+	private void sleepFor(long milliseconds)
+	{
+		try
+		{
+			Thread.sleep(milliseconds);
+		}
+		catch (InterruptedException e)
+		{
+			e.printStackTrace();
+		}
 	}
 }
