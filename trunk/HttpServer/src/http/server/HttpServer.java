@@ -1,8 +1,9 @@
 package http.server;
 
-import http.common.HttpHeader;
 import http.common.HttpRequest;
+import http.common.HttpRequestHeader;
 import http.common.HttpResponse;
+import http.common.HttpResponseHeader;
 import http.server.event.RequestEvent;
 import http.server.event.RequestEventProcessor;
 
@@ -53,17 +54,17 @@ public class HttpServer implements Runnable
 			// Crée une requête d'entrée
 			this.request = new HttpRequest();
 			// Attend de recevoir un header pour la requête
-			this.request.receiveHeader(this.socket.getInputStream());
-			HttpHeader requestHeader = this.request.getHeader();
+			HttpRequestHeader requestHeader = this.request.getHeader();
+			requestHeader.receive(this.socket.getInputStream());
 			
 			// Tente de parser le header
-			boolean requestIsGood = requestHeader.parseRequestHeader();
+			boolean requestIsGood = requestHeader.parse();
 			
 			System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
 			System.out.print(requestHeader.getText());
 			
 			this.response = new HttpResponse();
-			HttpHeader responseHeader = this.response.getHeader();
+			HttpResponseHeader responseHeader = this.response.getHeader();
 
 			// Si la requête est bien formée
 			if (requestIsGood)
@@ -144,7 +145,7 @@ public class HttpServer implements Runnable
 			}
 			
 			// Si capable de créer le header
-			if (this.response.makeHeader())
+			if (responseHeader.make())
 			{
 				System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
 				System.out.print(responseHeader.getText());

@@ -9,6 +9,7 @@ import java.net.UnknownHostException;
 import http.common.HttpHeader;
 import http.common.HttpRequest;
 import http.common.HttpResponse;
+import http.common.HttpResponseHeader;
 
 public class DownloadThread extends Thread
 {
@@ -91,12 +92,11 @@ public class DownloadThread extends Thread
 				{
 					// Attend de recevoir un header pour la réponse
 					this.response = new HttpResponse();
-					this.response.receiveHeader(this.socket.getInputStream());
-					HttpHeader responseHeader = this.response.getHeader();
+					HttpResponseHeader responseHeader = this.response.getHeader();
+					responseHeader.receive(this.socket.getInputStream());
 					
 					// Tente de parser le header
-					// TODO : Probleme dans le parsing ...
-					boolean responseIsGood = responseHeader.parseResponseHeader();
+					boolean responseIsGood = responseHeader.parse();
 					
 					System.out.println(String.format("[D] Thread %d (Réponse)", Thread.currentThread().getId()));
 					System.out.print(responseHeader.getText());
@@ -126,7 +126,7 @@ public class DownloadThread extends Thread
 							
 						// TODO : Verif Code + file exist on server
 						
-						this.response.read(this.socket.getInputStream());
+						this.response.receiveContent(this.socket.getInputStream());
 							
 						System.out.println(String.format("Download succeed. Saved : %s", f.getAbsoluteFile()));
 						retry = false;
