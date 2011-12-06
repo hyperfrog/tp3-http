@@ -96,13 +96,13 @@ public class DownloadThread extends Thread
 					
 					// Tente de parser le header
 					// TODO : Probleme dans le parsing ...
-					boolean requestIsGood = responseHeader.parseResponseHeader();
+					boolean responseIsGood = responseHeader.parseResponseHeader();
 					
 					System.out.println(String.format("[D] Thread %d (Réponse)", Thread.currentThread().getId()));
 					System.out.print(responseHeader.getText());
 					
-					// Si la requête est bien formée
-					if (requestIsGood)
+					// Si la réponse est bien formée
+					if (responseIsGood)
 					{
 						this.fileSize = Integer.parseInt(responseHeader.getField("Content-Length"));
 						
