@@ -246,6 +246,4 @@ public class HttpResponse
 	{
 		this.contentSendable = contentSendable;
 	}
-	
-	
 }

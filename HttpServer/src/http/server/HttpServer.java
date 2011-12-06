@@ -88,16 +88,28 @@ public class HttpServer implements Runnable
 
 						File f = new File(this.serverPath + this.siteRoot + requestHeader.getPath());
 
-						if (f.exists()) 
+						// Fichier inexistant ?
+						if (!f.exists()) 
+						{
+							responseHeader.setStatusCode(404); // Not Found
+							responseHeader.setField("Content-Length", "0");
+						}
+						// Répertoire ? Permission lecture manquante ?
+						else if (f.isDirectory() || !f.canRead()) 
+						{
+							responseHeader.setStatusCode(403); // Forbidden
+							responseHeader.setField("Content-Length", "0");
+						}
+						else
 						{
 							this.response.setFileName(f.getAbsolutePath());
 
-							// If dateTime1 is NOT earlier than dateTime2 -> 304 Not Modified
+							// Si date demandée n'est pas antérieure à date du fichier
 							if (requestHeader.getField("If-Modified-Since") != null 
 									&& !DateUtil.parseDate(requestHeader.getField("If-Modified-Since")).before(
 											DateUtil.parseDate(DateUtil.formatDate(new Date(f.lastModified())))))
 							{
-								responseHeader.setStatusCode(304);
+								responseHeader.setStatusCode(304); // Not Modified
 							}
 							else
 							{
@@ -117,42 +129,11 @@ public class HttpServer implements Runnable
 								responseHeader.setField("Content-Length", f.length() + "");
 							}
 						}
-						else
-						{
-							responseHeader.setStatusCode(404); // Not Found
-							responseHeader.setField("Content-Length", "0");
-
-//							if (requestHeader.accepts("text/html"))
-							{
-								File f404 = new File(this.serverPath + "error_404.htm");
-
-								if (f404.exists())
-								{
-									this.response.setFileName(f404.getAbsolutePath());
-
-									responseHeader.setField("Content-Type", "text/html");
-									responseHeader.setField("Content-Length", f404.length() + "");
-								}
-							}
-						}
 					}
 					else // POST, PUT, DELETE, TRACE, OPTIONS, CONNECT, PATCH
 					{
 						responseHeader.setStatusCode(501); // Not Implemented
 						responseHeader.setField("Content-Length", "0");
-						
-//						if (requestHeader.accepts("text/html"))
-						{
-							File f501 = new File(this.serverPath + "error_501.htm");
-
-							if (f501.exists())
-							{
-								this.response.setFileName(f501.getAbsolutePath());
-
-								responseHeader.setField("Content-Type", "text/html");
-								responseHeader.setField("Content-Length", f501.length() + "");
-							}
-						}						
 					}
 				}
 			}
@@ -160,19 +141,6 @@ public class HttpServer implements Runnable
 			{
 				responseHeader.setStatusCode(400); // Bad Request
 				responseHeader.setField("Content-Length", "0");
-				
-//				if (requestHeader.accepts("text/html"))
-				{
-					File f400 = new File(this.serverPath + "error_400.htm");
-
-					if (f400.exists())
-					{
-						this.response.setFileName(f400.getAbsolutePath());
-
-						responseHeader.setField("Content-Type", "text/html");
-						responseHeader.setField("Content-Length", f400.length() + "");
-					}
-				}						
 			}
 			
 			// Si capable de créer le header
@@ -181,6 +149,21 @@ public class HttpServer implements Runnable
 				System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
 				System.out.print(responseHeader.getText());
 
+				int statusCode = responseHeader.getStatusCode(); 
+				
+				if (statusCode >= 400)
+				{
+					File fError = new File(this.serverPath + "error_" + statusCode + ".htm");
+
+					if (fError.exists())
+					{
+						this.response.setFileName(fError.getAbsolutePath());
+
+						responseHeader.setField("Content-Type", "text/html");
+						responseHeader.setField("Content-Length", fError.length() + "");
+					}
+				}
+				
 				// Envoie la réponse
 				this.response.send(this.socket.getOutputStream());
 			}
