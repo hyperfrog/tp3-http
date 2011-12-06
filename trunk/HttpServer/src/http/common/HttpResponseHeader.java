@@ -39,28 +39,8 @@ public class HttpResponseHeader extends HttpHeader
 		this.isCacheable = true;
 	}
 	
-	/**
-	 * @param os
-	 * @return
-	 * @throws IOException
-	 */
-	public boolean send(OutputStream os) throws IOException
-	{
-		if (this.text == null || this.text.isEmpty())
-		{
-			if (!this.make())
-			{
-				return false;
-			}
-		}
-
-		return super.send(os);
-	}
-	
-	/**
-	 * Fabrique un header HTTP pour la réponse.
-	 * 
-	 * @return vrai si le header a pu être fabriqué, faux sinon
+	/* (non-Javadoc)
+	 * @see http.common.HttpHeader#make()
 	 */
 	public boolean make()
 	{
@@ -86,6 +66,9 @@ public class HttpResponseHeader extends HttpHeader
 		return false;
 	}
 
+	/* (non-Javadoc)
+	 * @see http.common.HttpHeader#parse()
+	 */
 	public boolean parse()
 	{
 		boolean success = true;

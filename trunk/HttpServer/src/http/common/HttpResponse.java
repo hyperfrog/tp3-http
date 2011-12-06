@@ -48,7 +48,9 @@ public class HttpResponse
 			return false;
 		}
 		
-		if (this.isContentSendable && this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
+		if (this.isContentSendable 
+				&& this.header.getField("Content-Length") != null 
+				&& !this.header.getField("Content-Length").equals("0"))
 		{
 			if (this.content == null )
 			{
