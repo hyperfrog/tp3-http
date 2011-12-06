@@ -1,32 +1,29 @@
 package http.common;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 
 public class HttpResponse
 {
 	private static final int KB_PER_SECOND = 50; 
 
-	private HttpHeader header;
+	private HttpResponseHeader header;
 	private byte[] content;
 	private String fileName;
 	private boolean isCacheable;
-	private boolean contentSendable;
+	private boolean isContentSendable;
 	
 	/**
 	 * Construit une réponse HTTP.
 	 */
 	public HttpResponse()
 	{
-		this.header = new HttpHeader();
+		this.header = new HttpResponseHeader();
 		this.content = null;
 		this.fileName = "";
 		this.header.setProtocol("HTTP/1.1");
@@ -34,19 +31,9 @@ public class HttpResponse
 		this.header.setField("Server", "CLES 0.1");
 		this.header.setField("Connection", "close");
 		this.isCacheable = true;
-		this.contentSendable = true;
+		this.isContentSendable = true;
 	}
 
-	/**
-	 * Fabrique un header HTTP pour la réponse.
-	 * 
-	 * @return vrai si le header a pu être fabriqué, faux sinon
-	 */
-	public boolean makeHeader()
-	{
-		return this.header.makeResponseHeader(this.isCacheable);
-	}
-	
 	/**
 	 * Envoie la réponse HTTP dans la stream de sortie passée en paramètre. 
 	 * 
@@ -56,20 +43,12 @@ public class HttpResponse
 	 */
 	public boolean send(OutputStream os) throws IOException
 	{
-		if (this.header.getText() == null || this.header.getText().isEmpty())
+		if (!this.header.send(os))
 		{
-			if (!this.header.makeResponseHeader(this.isCacheable))
-			{
-				return false;
-			}
+			return false;
 		}
-
-		OutputStreamWriter osw = new OutputStreamWriter(os);
-
-		osw.write(this.header.getText());
-		osw.flush();
-
-		if (this.contentSendable && this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
+		
+		if (this.isContentSendable && this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
 		{
 			if (this.content == null )
 			{
@@ -106,34 +85,12 @@ public class HttpResponse
 	}
 	
 	/**
-	 * @param is
-	 * @throws IOException
-	 */
-	public void receiveHeader(InputStream is) throws IOException
-	{
-		BufferedReader in = new BufferedReader(new InputStreamReader(is));
-
-		String requestHeader = new String();
-		String line;
-		
-		// Lit l'en-tête (header)
-		do
-		{
-			line = in.readLine();
-			requestHeader += line + "\r\n";
-
-		} while (line != null && !line.isEmpty());
-
-		this.header.setText(requestHeader);
-	}
-	
-	/**
 	 * 
 	 * @param os
 	 * @return
 	 * @throws IOException
 	 */
-	public boolean read(InputStream is) throws IOException
+	public boolean receiveContent(InputStream is) throws IOException
 	{
 		if (this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
 		{
@@ -169,7 +126,7 @@ public class HttpResponse
 	/**
 	 * @return
 	 */
-	public HttpHeader getHeader()
+	public HttpResponseHeader getHeader()
 	{
 		return this.header;
 	}
@@ -228,6 +185,7 @@ public class HttpResponse
 	 */
 	public void setCacheable(boolean isCacheable)
 	{
+		this.header.setCacheable(isCacheable);
 		this.isCacheable = isCacheable;
 	}
 
@@ -236,14 +194,14 @@ public class HttpResponse
 	 */
 	public boolean isContentSendable()
 	{
-		return contentSendable;
+		return isContentSendable;
 	}
 
 	/**
-	 * @param contentSendable the sendContent to set
+	 * @param isContentSendable the sendContent to set
 	 */
-	public void setContentSendable(boolean contentSendable)
+	public void setContentSendable(boolean isContentSendable)
 	{
-		this.contentSendable = contentSendable;
+		this.isContentSendable = isContentSendable;
 	}
 }

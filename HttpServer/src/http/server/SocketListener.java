@@ -148,7 +148,7 @@ public class SocketListener implements RequestEventProcessor, Runnable
 			response.setContent(content, Charset.forName("UTF-8"));
 //			res.setField("Content-Length", res.getContent().length + "");
 
-			response.makeHeader();
+			response.getHeader().make();
 			try
 			{
 				System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
