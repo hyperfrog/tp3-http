@@ -1,8 +1,12 @@
 package http.common;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
@@ -98,6 +102,67 @@ public class HttpResponse
 				os.flush();
 			}
 		}
+		return true;
+	}
+	
+	/**
+	 * @param is
+	 * @throws IOException
+	 */
+	public void receiveHeader(InputStream is) throws IOException
+	{
+		BufferedReader in = new BufferedReader(new InputStreamReader(is));
+
+		String requestHeader = new String();
+		String line;
+		
+		// Lit l'en-tête (header)
+		do
+		{
+			line = in.readLine();
+			requestHeader += line + "\r\n";
+
+		} while (line != null && !line.isEmpty());
+
+		this.header.setText(requestHeader);
+	}
+	
+	/**
+	 * 
+	 * @param os
+	 * @return
+	 * @throws IOException
+	 */
+	public boolean read(InputStream is) throws IOException
+	{
+		if (this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
+		{
+			File outputFile = new File(this.fileName + ".tmp");
+			
+			FileOutputStream fos = new FileOutputStream(outputFile);
+			
+			byte[] buf = new byte[1024];
+			int len;
+			
+			while ((len = is.read(buf)) > 0)
+			{
+				fos.write(buf, 0, len);
+				
+				try
+				{
+					Thread.sleep(1000/KB_PER_SECOND);
+				}
+				catch (InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+			}
+
+			fos.close();
+			
+			outputFile.renameTo(new File(this.fileName));
+		}
+		
 		return true;
 	}
 	
