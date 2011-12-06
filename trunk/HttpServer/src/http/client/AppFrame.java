@@ -1,92 +1,44 @@
 package http.client;
 
 import java.awt.BorderLayout;
-import java.awt.GridLayout;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.net.MalformedURLException;
 
-import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
+import javax.swing.UIManager;
 
-
-public class AppFrame extends JFrame implements ActionListener
+public class AppFrame extends JFrame implements ActionListener, ComponentListener
 {
-	private static final String TITLE = "HttpClient";
-	private static final int WIDTH = 800;
-	private static final int HEIGHT = 600;
+	private static final Dimension INIT_SIZE = new Dimension(600, 300);
+	private static final int MIN_WIDTH = 600;
+	private static final int MIN_HEIGHT = 300;
+	private static final String INIT_TITLE = "Outils de téléchargement";
 	
-	// 
 	private AppDownload appDownload;
-	// 
-	private JPanel buttonsPanel;
-	// 
-	private JButton addButton;
-	// 
-	private JButton removeButton;
-	// 
-	private JButton moveUpButton;
-	// 
-	private JButton moveDownButton;
-	// 
-	private JButton stopButton;
-	// 
-	private JButton startButton;
-	// 
+	private AppToolBar appToolBar; 
 	private JTable downloadsTable;
 	
 	public AppFrame()
 	{
 		super();
+		this.setNativeLookAndFeel();
 		
 		this.appDownload = new AppDownload();
-		
-		this.buttonsPanel = new JPanel();
-		this.addButton = new JButton();
-		this.removeButton = new JButton();
-		this.moveUpButton = new JButton();
-		this.moveDownButton = new JButton();
-		this.stopButton = new JButton();
-		this.startButton = new JButton();
+		this.appToolBar = new AppToolBar(this);
 		this.downloadsTable = new JTable();
 		
-		this.setTitle(AppFrame.TITLE);
-		this.setSize(AppFrame.WIDTH, AppFrame.HEIGHT);
+		this.setTitle(AppFrame.INIT_TITLE);
+		this.setSize(AppFrame.INIT_SIZE);
 		this.setLocationRelativeTo(null);
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		
-		this.getContentPane().setLayout(new BorderLayout(10, 10));
-		
-		this.buttonsPanel.setLayout(new GridLayout(6, 0, 10, 10));
-		
-		this.addButton.setText("Ajouter");
-		this.addButton.setActionCommand("ADD");
-		
-		this.removeButton.setText("Supprimer");
-		this.removeButton.setActionCommand("DELETE");
-		
-		this.moveUpButton.setText("Monter"); 
-		this.moveUpButton.setActionCommand("MOVE_UP");
-		
-		this.moveDownButton.setText("Descendre");
-		this.moveDownButton.setActionCommand("MOVE_DOWN");
-		
-		this.stopButton.setText("Arrêter");
-		this.stopButton.setActionCommand("STOP");
-		
-		this.startButton.setText("Démarrer");
-		this.startButton.setActionCommand("START");
-		
-		this.buttonsPanel.add(this.addButton);
-		this.buttonsPanel.add(this.removeButton);
-		this.buttonsPanel.add(this.moveUpButton);
-		this.buttonsPanel.add(this.moveDownButton);
-		this.buttonsPanel.add(this.stopButton);
-		this.buttonsPanel.add(this.startButton);
 		
 		DownloadTableModel tableModel = new DownloadTableModel(this.appDownload.getDownloadsList());
 		this.downloadsTable.setModel(tableModel);
@@ -94,15 +46,24 @@ public class AppFrame extends JFrame implements ActionListener
 		
 		JScrollPane scrollpane = new JScrollPane(this.downloadsTable);
 		
-		this.getContentPane().add(scrollpane, BorderLayout.CENTER);
-		this.getContentPane().add(this.buttonsPanel, BorderLayout.EAST);
+		this.getContentPane().setLayout(new BorderLayout());
 		
-		this.addButton.addActionListener(this);
-		this.removeButton.addActionListener(this);
-		this.moveUpButton.addActionListener(this);
-		this.moveDownButton.addActionListener(this);
-		this.stopButton.addActionListener(this);
-		this.startButton.addActionListener(this);
+		this.getContentPane().add(this.appToolBar, BorderLayout.PAGE_START);
+		this.getContentPane().add(scrollpane, BorderLayout.CENTER);
+		
+		this.addComponentListener(this);
+	}
+	
+	private void setNativeLookAndFeel()
+	{
+		try
+		{
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		}
+		catch (Exception e)
+		{
+			System.err.println("Incapable de changer l'apparence de l'application.");
+		}
 	}
 	
 	@Override
@@ -118,19 +79,55 @@ public class AppFrame extends JFrame implements ActionListener
 					"Ajout d'un téléchargement", 
 					JOptionPane.DEFAULT_OPTION);
 			
-			if (newUrl != null && newUrl.length() != 0)
+			if (newUrl != null && newUrl.length() > 0)
 			{
-				this.appDownload.addDownload(newUrl);
-				needUpdate = true;
+				// TODO : Verif destination
+				String savePath = JOptionPane.showInputDialog(
+						this, 
+						"Entrer la destination du fichier : ", 
+						"Destination", 
+						JOptionPane.DEFAULT_OPTION);
+				
+				if (savePath != null && savePath.length() > 0)
+				{
+					try
+					{
+						this.appDownload.addDownload(newUrl, savePath);
+					}
+					catch (MalformedURLException e)
+					{
+						JOptionPane.showMessageDialog(this, e.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+						e.printStackTrace();
+					}
+					
+					needUpdate = true;
+				}
+				else
+				{
+					JOptionPane.showMessageDialog(this, "Il y une erreur avec la destination entrée.", "Erreur", JOptionPane.ERROR_MESSAGE);
+				}
+			}
+			else
+			{
+				JOptionPane.showMessageDialog(this, "Il y a une erreur avec l'adresse entrée.", "Erreur", JOptionPane.ERROR_MESSAGE);
 			}
 		}
 		else if (evt.getActionCommand().equals("DELETE"))
 		{
 			if (this.downloadsTable.getSelectedRow() != -1)
 			{
-				// TODO : Confirmation
-				this.appDownload.removeDownload(this.downloadsTable.getSelectedRow());
-				needUpdate = true;
+				int response = JOptionPane.showConfirmDialog(
+						this, 
+						"Êtes-vous sûr de vouloir supprimer ce téléchargement ?",
+						"Confirmation", 
+						JOptionPane.YES_NO_OPTION, 
+						JOptionPane.QUESTION_MESSAGE);
+				
+				if (response == JOptionPane.YES_OPTION)
+				{
+					this.appDownload.removeDownload(this.downloadsTable.getSelectedRow());
+					needUpdate = true;
+				}
 			}
 		}
 		else if (evt.getActionCommand().equals("MOVE_UP"))
@@ -166,7 +163,46 @@ public class AppFrame extends JFrame implements ActionListener
 		
 		if (needUpdate)
 		{
-			((DownloadTableModel) this.downloadsTable.getModel()).update();
+			((DownloadTableModel) this.downloadsTable.getModel()).fireTableDataChanged();
 		}
+	}
+	
+	@Override
+	public void componentResized(ComponentEvent evt)
+	{
+		int width = getWidth();
+		int height = getHeight();
+		// Vérifie si la largeur et la hauteur sont inférieures 
+		// à la valeur minimale permise pour chacune
+		boolean resize = false;
+		if (width < AppFrame.MIN_WIDTH)
+		{
+			resize = true;
+			width = AppFrame.MIN_WIDTH;
+		}
+		if (height < AppFrame.MIN_HEIGHT)
+		{
+			resize = true;
+			height = AppFrame.MIN_HEIGHT;
+		}
+		if (resize)
+		{
+			this.setSize(width, height);
+		}
+	}
+	
+	@Override
+	public void componentHidden(ComponentEvent evt)
+	{	
+	}
+
+	@Override
+	public void componentMoved(ComponentEvent evt)
+	{
+	}
+	
+	@Override
+	public void componentShown(ComponentEvent evt)
+	{
 	}
 }

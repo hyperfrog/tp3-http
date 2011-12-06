@@ -1,21 +1,29 @@
 package http.client;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 public class AppDownload
 {
+	private static final int MAX_DOWNLOADS = 4;
+	
 	private List<DownloadThread> downloadsList;
+	private int nbCurrentDownloads;
 	
 	public AppDownload()
 	{
 		this.downloadsList = new ArrayList<DownloadThread>();
+		this.nbCurrentDownloads = 0;
 	}
 	
-	public boolean addDownload(String url)
+	public void addDownload(String url, String savePath) throws MalformedURLException
 	{
-		DownloadThread dl = new DownloadThread(url);
-		return this.downloadsList.add(dl); 
+		URL newUrl = new URL(url);
+			
+		DownloadThread dl = new DownloadThread(newUrl, savePath);
+		this.downloadsList.add(dl);
 	}
 	
 	public void removeDownload(int pos)
@@ -28,12 +36,14 @@ public class AppDownload
 			}
 			
 			this.downloadsList.remove(pos);
+			
+			this.nbCurrentDownloads--;
 		}
 	}
 	
 	public void moveUp(int pos)
 	{
-		if (pos > 0 && pos <= this.downloadsList.size())
+		if (this.downloadsList.size() > 1 && (pos > 0 && pos <= this.downloadsList.size()))
 		{
 			DownloadThread temp = this.downloadsList.get(pos - 1);
 			this.downloadsList.set(pos - 1, this.downloadsList.get(pos));
@@ -43,7 +53,7 @@ public class AppDownload
 	
 	public void moveDown(int pos)
 	{
-		if (pos >= 0 && pos < this.downloadsList.size())
+		if (this.downloadsList.size() > 1 && (pos >= 0 && pos < this.downloadsList.size()))
 		{
 			DownloadThread temp = this.downloadsList.get(pos + 1);
 			this.downloadsList.set(pos + 1, this.downloadsList.get(pos));
@@ -53,16 +63,10 @@ public class AppDownload
 	
 	public void startDownload(int pos)
 	{
-		if (pos >= 0 && pos <= this.downloadsList.size())
-		{
-			if (!this.downloadsList.get(pos).isAlive())
-			{
-				this.downloadsList.get(pos).start();
-			}
-			else if (this.downloadsList.get(pos).isPaused())
-			{
-				this.downloadsList.get(pos).resumeDownload();
-			}
+		if (this.nbCurrentDownloads < AppDownload.MAX_DOWNLOADS && (pos >= 0 && pos <= this.downloadsList.size()) && !this.downloadsList.get(pos).isAlive())
+		{	
+			this.downloadsList.get(pos).start();
+			this.nbCurrentDownloads++;
 		}
 	}
 	
@@ -70,7 +74,8 @@ public class AppDownload
 	{
 		if ((pos >= 0 && pos <= this.downloadsList.size())  && this.downloadsList.get(pos).isAlive())
 		{
-			this.downloadsList.get(pos).pauseDownload();
+			//this.downloadsList.get(pos).closeConnection();
+			this.removeDownload(pos);
 		}
 	}
 	

@@ -1,12 +1,13 @@
 package http.client;
 
+
 import java.util.List;
 import javax.swing.table.AbstractTableModel;
 
 
 public class DownloadTableModel extends AbstractTableModel
 {
-	private String[] columnNames = {"URL", "Progression"};
+	private String[] columnNames = {"Adresse Url", "Taille", "État"};
 	private List<DownloadThread> downloadsList;
 	
 	public DownloadTableModel(List<DownloadThread> data)
@@ -39,20 +40,17 @@ public class DownloadTableModel extends AbstractTableModel
 			switch (col)
 			{
 			case 0:
-				value = dl.getId();
+				value = dl.getUrl();
 				break;
 			case 1:
-				value = dl.isDone();
+				value = dl.getSize();
+				break;
+			case 2:
+				value = dl.getCurrentState();
 				break;
 			}
 		}
 		
 		return value;
-	}
-	
-	public void update()
-	{
-		// TODO : Mettre à jour seulement la rangée
-		this.fireTableDataChanged();
 	}
 }
