@@ -30,50 +30,50 @@ public class HttpHeader
 {
 	private static final String DEFAULT_URL_ENCODING = "ISO-8859-1";
 	
-	private static final Map<Integer, String> statusCodeDesc = new HashMap<Integer, String>();
+	private static final Map<Integer, String> statusCodeDescMap = new HashMap<Integer, String>();
 	static
 	{
-		statusCodeDesc.put(100, "Continue");
-		statusCodeDesc.put(101, "Switching Protocols");
-		statusCodeDesc.put(200, "OK");
-		statusCodeDesc.put(201, "Created");
-		statusCodeDesc.put(202, "Accepted");
-		statusCodeDesc.put(203, "Non-Authoritative Information");
-		statusCodeDesc.put(204, "No Content");
-		statusCodeDesc.put(205, "Reset Content");
-		statusCodeDesc.put(206, "Partial Content");
-		statusCodeDesc.put(300, "Multiple Choices");
-		statusCodeDesc.put(301, "Moved Permanently");
-		statusCodeDesc.put(302, "Found");
-		statusCodeDesc.put(303, "See Other");
-		statusCodeDesc.put(304, "Not Modified");
-		statusCodeDesc.put(305, "Use Proxy");
-		statusCodeDesc.put(306, "(Unused)");
-		statusCodeDesc.put(307, "Temporary Redirect");
-		statusCodeDesc.put(400, "Bad Request");
-		statusCodeDesc.put(401, "Unauthorized");
-		statusCodeDesc.put(402, "Payment Required");
-		statusCodeDesc.put(403, "Forbidden");
-		statusCodeDesc.put(404, "Not Found");
-		statusCodeDesc.put(405, "Method Not Allowed");
-		statusCodeDesc.put(406, "Not Acceptable");
-		statusCodeDesc.put(407, "Proxy Authentication Required");
-		statusCodeDesc.put(408, "Request Timed Out");
-		statusCodeDesc.put(409, "Conflict");
-		statusCodeDesc.put(410, "Gone");
-		statusCodeDesc.put(411, "Length Required");
-		statusCodeDesc.put(412, "Precondition Failed");
-		statusCodeDesc.put(413, "Request Entity Too Large");
-		statusCodeDesc.put(414, "Request URL Too Long");
-		statusCodeDesc.put(415, "Unsupported Media Type");
-		statusCodeDesc.put(416, "Requested Range Not Satisfiable");
-		statusCodeDesc.put(417, "Expectation Failed");
-		statusCodeDesc.put(500, "Internal Server Error");
-		statusCodeDesc.put(501, "Not implemented");
-		statusCodeDesc.put(502, "Bad Gateway");
-		statusCodeDesc.put(503, "Service Unavailable");
-		statusCodeDesc.put(504, "Gateway Timeout");
-		statusCodeDesc.put(505, "HTTP Version Not Supported");
+		statusCodeDescMap.put(100, "Continue");
+		statusCodeDescMap.put(101, "Switching Protocols");
+		statusCodeDescMap.put(200, "OK");
+		statusCodeDescMap.put(201, "Created");
+		statusCodeDescMap.put(202, "Accepted");
+		statusCodeDescMap.put(203, "Non-Authoritative Information");
+		statusCodeDescMap.put(204, "No Content");
+		statusCodeDescMap.put(205, "Reset Content");
+		statusCodeDescMap.put(206, "Partial Content");
+		statusCodeDescMap.put(300, "Multiple Choices");
+		statusCodeDescMap.put(301, "Moved Permanently");
+		statusCodeDescMap.put(302, "Found");
+		statusCodeDescMap.put(303, "See Other");
+		statusCodeDescMap.put(304, "Not Modified");
+		statusCodeDescMap.put(305, "Use Proxy");
+		statusCodeDescMap.put(306, "(Unused)");
+		statusCodeDescMap.put(307, "Temporary Redirect");
+		statusCodeDescMap.put(400, "Bad Request");
+		statusCodeDescMap.put(401, "Unauthorized");
+		statusCodeDescMap.put(402, "Payment Required");
+		statusCodeDescMap.put(403, "Forbidden");
+		statusCodeDescMap.put(404, "Not Found");
+		statusCodeDescMap.put(405, "Method Not Allowed");
+		statusCodeDescMap.put(406, "Not Acceptable");
+		statusCodeDescMap.put(407, "Proxy Authentication Required");
+		statusCodeDescMap.put(408, "Request Timed Out");
+		statusCodeDescMap.put(409, "Conflict");
+		statusCodeDescMap.put(410, "Gone");
+		statusCodeDescMap.put(411, "Length Required");
+		statusCodeDescMap.put(412, "Precondition Failed");
+		statusCodeDescMap.put(413, "Request Entity Too Large");
+		statusCodeDescMap.put(414, "Request URL Too Long");
+		statusCodeDescMap.put(415, "Unsupported Media Type");
+		statusCodeDescMap.put(416, "Requested Range Not Satisfiable");
+		statusCodeDescMap.put(417, "Expectation Failed");
+		statusCodeDescMap.put(500, "Internal Server Error");
+		statusCodeDescMap.put(501, "Not implemented");
+		statusCodeDescMap.put(502, "Bad Gateway");
+		statusCodeDescMap.put(503, "Service Unavailable");
+		statusCodeDescMap.put(504, "Gateway Timeout");
+		statusCodeDescMap.put(505, "HTTP Version Not Supported");
 	}
 	
 	// Texte complet du header
@@ -93,6 +93,9 @@ public class HttpHeader
 	
 	// Code de la réponse (p. ex. 404)
 	private int statusCode;
+	
+	// Description du code de la réponse
+	private String statusCodeDescription;
 	
 	// Dictionnaire des paramètres 
 	private Map<String, String> parameters;
@@ -122,7 +125,7 @@ public class HttpHeader
 	
 	public boolean makeResponseHeader(boolean isCacheable)
 	{
-		if (statusCodeDesc.containsKey(this.statusCode))
+		if (statusCodeDescMap.containsKey(this.statusCode))
 		{
 			this.fields.put("Date", DateUtil.formatDate(new Date()));
 			if (!isCacheable) 
@@ -131,7 +134,7 @@ public class HttpHeader
 				this.fields.put("Cache-Control", "max-age=0, must-revalidate");
 			}
 
-			this.text = String.format("%s %d %s\r\n", this.protocol, this.statusCode, statusCodeDesc.get(this.statusCode));
+			this.text = String.format("%s %d %s\r\n", this.protocol, this.statusCode, statusCodeDescMap.get(this.statusCode));
 
 			for (String field : this.fields.keySet())
 			{
@@ -220,6 +223,40 @@ public class HttpHeader
 					{
 						success = true;
 					}
+				}
+			}
+		}
+		
+		return success;
+	}
+	
+	public boolean parseResponseHeader()
+	{
+		boolean success = true;
+		
+		if (this.text != null) 
+		{
+			ArrayList<String> headerLines = split(this.text, "\r\n", true);
+
+			Pattern pFullRequest = Pattern.compile("\\A(HTTP/.+) (\\d{3}) (.+)\\Z");
+			Matcher mFullRequest = pFullRequest.matcher(headerLines.get(0));
+
+			if (mFullRequest.find()) 
+			{
+				this.protocol = mFullRequest.group(1);
+				
+				try
+				{
+					this.statusCode = Integer.parseInt(mFullRequest.group(2));
+				}
+				catch (NumberFormatException e)
+				{
+					success = false;
+				}
+
+				if (headerLines.size() > 1)
+				{
+					this.parseFields(headerLines.subList(1, headerLines.size()));
 				}
 			}
 		}
@@ -376,7 +413,7 @@ public class HttpHeader
 	 */
 	public boolean setStatusCode(int statusCode)
 	{
-		if (statusCodeDesc.containsKey(statusCode))
+		if (statusCodeDescMap.containsKey(statusCode))
 		{
 			this.statusCode = statusCode;
 			return true;

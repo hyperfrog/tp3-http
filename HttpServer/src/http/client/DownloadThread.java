@@ -96,7 +96,7 @@ public class DownloadThread extends Thread
 					
 					// Tente de parser le header
 					// TODO : Probleme dans le parsing ...
-					boolean requestIsGood = responseHeader.parseRequestHeader();
+					boolean requestIsGood = responseHeader.parseResponseHeader();
 					
 					System.out.println(String.format("[D] Thread %d (Réponse)", Thread.currentThread().getId()));
 					System.out.print(responseHeader.getText());
