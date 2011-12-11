@@ -108,6 +108,8 @@ public abstract class HttpHeader
 	 */
 	public void receive(InputStream is) throws IOException
 	{
+//		System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
+
 		BufferedReader in = new BufferedReader(new InputStreamReader(is));
 
 		String headerText = new String();
@@ -122,6 +124,8 @@ public abstract class HttpHeader
 		} while (line != null && !line.isEmpty());
 
 		this.text = headerText;
+		
+//		System.out.print(headerText);
 	}
 	
 	/**

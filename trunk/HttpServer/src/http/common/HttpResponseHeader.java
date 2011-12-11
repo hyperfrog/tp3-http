@@ -5,8 +5,6 @@ package http.common;
 
 import static util.BasicString.split;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.regex.Matcher;
