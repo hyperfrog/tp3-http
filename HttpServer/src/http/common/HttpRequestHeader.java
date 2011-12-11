@@ -7,10 +7,9 @@ import static util.BasicString.bytesToString;
 import static util.BasicString.isAscii;
 import static util.BasicString.isValidUtf8;
 import static util.BasicString.split;
+import static util.BasicString.join;
 import static util.BasicString.unescape;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,27 +58,27 @@ public class HttpRequestHeader extends HttpHeader
 	 */
 	public boolean make()
 	{
-		
-			String path = (this.fullPath == null || this.fullPath.isEmpty()) ? this.path : this.fullPath;
-			
-			/* TODO: Si this.parameters n'est pas vide et que path ne contient pas de paramètres,
-			 * il faudrait ajouter les paramètres du dictionnaire au path
-			 */
-			
-			if (path == null || path.isEmpty() || this.method == null || this.method.isEmpty() || this.protocol == null || this.protocol.isEmpty())
-			{
-				return false;
-			}
-		
-			this.text = String.format("%s %s %s\r\n", this.method , path, this.protocol);
+		String path = (this.fullPath == null || this.fullPath.isEmpty()) ? this.path : this.fullPath;
 
-			for (String field : this.fields.keySet())
-			{
-				this.text += String.format("%s: %s\r\n", field, this.fields.get(field));
-			}
-			this.text += "\r\n";
-			
-			return true;
+		/* TODO: Si this.parameters n'est pas vide et que path ne contient pas de paramètres,
+		 * il faudrait ajouter les paramètres du dictionnaire au path
+		 */
+
+		// Cas d'erreur
+		if (path == null || path.isEmpty() || this.method == null || this.method.isEmpty() || this.protocol == null || this.protocol.isEmpty())
+		{
+			return false;
+		}
+
+		this.text = String.format("%s %s %s\r\n", this.method , path, this.protocol);
+
+		for (String field : this.fields.keySet())
+		{
+			this.text += String.format("%s: %s\r\n", field, this.fields.get(field));
+		}
+		this.text += "\r\n";
+
+		return true;
 	}
 	
 	/* (non-Javadoc)
@@ -119,9 +118,6 @@ public class HttpRequestHeader extends HttpHeader
 				{
 					this.parseGetParams(fullPathParts.get(1));
 				}
-
-				// Remplace les / par des \ 
-//				this.pathName = join(split(this.pathName, "/"), "\\");
 
 				if (this.protocol.equals("HTTP/1.0"))
 				{

@@ -146,8 +146,11 @@ public class HttpResponse
 	 */
 	public void setContent(byte[] content)
 	{
-		this.content = content;
-		this.header.setField("Content-Length", this.content.length + "");
+		if (content != null)
+		{
+			this.content = content;
+			this.header.setField("Content-Length", this.content.length + "");
+		}
 	}
 
 	/**
@@ -155,7 +158,10 @@ public class HttpResponse
 	 */
 	public void setContent(String content, Charset cs)
 	{
-		this.setContent(content.getBytes(cs));
+		if (content != null)
+		{
+			this.setContent(content.getBytes(cs));
+		}
 	}
 
 	/**

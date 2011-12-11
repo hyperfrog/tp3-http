@@ -1,5 +1,8 @@
 package http.server;
 
+import static util.BasicString.join;
+import static util.BasicString.split;
+import static util.BasicString.stringToMap;
 import http.common.HttpRequest;
 import http.common.HttpRequestHeader;
 import http.common.HttpResponse;
@@ -8,39 +11,59 @@ import http.server.event.RequestEvent;
 import http.server.event.RequestEventProcessor;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import util.DateUtil;
 
-public class HttpServer implements Runnable
+/**
+ * @author Christian
+ *
+ */
+public class HttpServerThread implements Runnable
 {
+	// Socket de la connexion liée au thread
 	private Socket socket = null;
+	
+	// Chemin absolu du dossier où se trouvent les fichiers nécessaires au serveur
 	private String serverPath;
-	private String siteRoot = "";
+	
+	// Chemin relatif du dossier où se trouvent les fichiers du site Web à servir
+	private String siteFolder;
+	
 	private Map<String, String> mimeTypes;
 	private RequestEventProcessor evtProcessor;
 	private HttpRequest request;
 	private HttpResponse response;
 	
+	private static final String FILE_SEP = System.getProperties().getProperty("file.separator");
+
 	/**
 	 * @param client
 	 * @param serverPath
-	 * @param siteRoot
+	 * @param siteFolder
 	 * @param mimeTypes
 	 * @param ep
 	 */
-	public HttpServer(Socket client, String serverPath, String siteRoot, Map<String, String> mimeTypes, RequestEventProcessor ep)
+	public HttpServerThread(Socket client, String serverPath, String siteFolder, Map<String, String> mimeTypes, RequestEventProcessor ep)
 	{
 		this.socket = client;
-		File file = new File(serverPath);
-		this.serverPath = file.isDirectory() ? file.getAbsolutePath() + "\\" : "";
-		this.siteRoot = siteRoot;
+		
+		File f = new File(serverPath);
+		this.serverPath = f.isDirectory() ? f.getAbsolutePath() : ".";
+		this.serverPath += FILE_SEP;
+		
+		f = new File(this.serverPath + siteFolder);
+		this.siteFolder = f.isDirectory() ? siteFolder : "www";
+		
 		this.mimeTypes = mimeTypes;
+
 		this.evtProcessor = ep;
 	}
 
@@ -69,14 +92,14 @@ public class HttpServer implements Runnable
 			// Si la requête est bien formée
 			if (requestIsGood)
 			{
-				// Envoie l'évènement de requête reçue
+				// Envoie un évènement de requête reçue pour permettre d'effectuer un traitement différent
 				RequestEvent evt = new RequestEvent(this);
 				this.evtProcessor.requestEventReceived(evt);
 
 				// Si l'évènement n'a pas été annulé 
 				if (!evt.cancel) 
 				{
-					// Si la requête utilise la méthode GET 
+					// Si la requête utilise la méthode GET ou HEAD
 					if (requestHeader.getMethod().equals("GET") || requestHeader.getMethod().equals("HEAD"))
 					{
 						if (requestHeader.getMethod().equals("HEAD"))
@@ -86,9 +109,19 @@ public class HttpServer implements Runnable
 						
 						// La réponse sera «cachable» puisqu'on s'apprête à servir un fichier du système de fichiers 
 						this.response.setCacheable(true);
+						
+						String filePath = this.serverPath + this.siteFolder + requestHeader.getPath();
+						
+						// Remplace les / par des \ au besoin
+						if (FILE_SEP != "/")
+						{
+							filePath = join(split(filePath, "/"), FILE_SEP);
+						}
 
-						File f = new File(this.serverPath + this.siteRoot + requestHeader.getPath());
+						System.out.println("Fichier à servir : " + filePath);
 
+						File f = new File(filePath);
+						
 						// Fichier inexistant ?
 						if (!f.exists()) 
 						{
