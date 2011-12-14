@@ -6,7 +6,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
-import java.net.MalformedURLException;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -15,23 +14,46 @@ import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
 
+/**
+ * La classe AppFrame permet de créer une fenêtre servant de contenant
+ * à la barre d'outils ainsi qu'au panneau principal de l'application.
+ * 
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
+ * 
+ */
 public class AppFrame extends JFrame implements ActionListener, ComponentListener
 {
+	// Dimension initiale de la fenêtre
 	private static final Dimension INIT_SIZE = new Dimension(600, 300);
+	
+	// Largeur minimale de la fenêtre
 	private static final int MIN_WIDTH = 600;
+	
+	// Hauteur minimale de la fenêtre
 	private static final int MIN_HEIGHT = 300;
+	
+	// Titre de la fenêtre
 	private static final String INIT_TITLE = "Outils de téléchargement";
 	
+	// Objet pour gèrer les téléchargements
 	private AppDownload appDownload;
-	private AppToolBar appToolBar; 
+	
+	// Barre d'outils de l'application
+	private AppToolBar appToolBar;
+	
+	// Tableau contenant la liste des téléchargements
 	private JTable downloadsTable;
 	
+	/**
+	 * Créer une nouvelle fenêtre
+	 */
 	public AppFrame()
 	{
 		super();
 		this.setNativeLookAndFeel();
 		
-		this.appDownload = new AppDownload();
+		this.appDownload = new AppDownload(this);
 		this.appToolBar = new AppToolBar(this);
 		this.downloadsTable = new JTable();
 		
@@ -51,9 +73,11 @@ public class AppFrame extends JFrame implements ActionListener, ComponentListene
 		this.getContentPane().add(this.appToolBar, BorderLayout.PAGE_START);
 		this.getContentPane().add(scrollpane, BorderLayout.CENTER);
 		
+		// Spécifie l'écouteur pour la fenêtre
 		this.addComponentListener(this);
 	}
 	
+	// Change le look and feel pour celui de la plateforme
 	private void setNativeLookAndFeel()
 	{
 		try
@@ -66,51 +90,51 @@ public class AppFrame extends JFrame implements ActionListener, ComponentListene
 		}
 	}
 	
+	/*
+	 * Affiche la boîte de dialogue «Ajouter une adresse»
+	 */
+	private void showAddDialog()
+	{
+		AppAddDialog addDialog = new AppAddDialog(this);
+		addDialog.setLocationRelativeTo(this);
+		addDialog.setVisible(true);
+	}
+	
+	/**
+	 * Retourne l'objet AppDownload utilisé par AppFrame.
+	 * 
+	 * @return l'objet AppDownload utilisé par AppFrame
+	 */
+	public AppDownload getAppDownload()
+	{
+		return this.appDownload;
+	}
+	
+	/**
+	 * Met à jour le tableau des téléchargements
+	 */
+	public void updateTable()
+	{
+		((DownloadTableModel) this.downloadsTable.getModel()).fireTableDataChanged();
+	}
+	
 	@Override
+	/**
+	 * Reçoit et traite les événements relatifs aux boutons de la barre d'outils
+	 * Cette méthode doit être publique mais ne devrait pas être appelée directement.
+	 * 
+	 * @see java.awt.event.ActionListener#actionPerformed(java.awt.event.ActionEvent)
+	 * 
+	 * @param evt événement déclencheur
+	 */
 	public void actionPerformed(ActionEvent evt)
 	{
 		boolean needUpdate = false;
 		
 		if (evt.getActionCommand().equals("ADD"))
 		{
-			String newUrl = JOptionPane.showInputDialog(
-					this, 
-					"Entrer le lien à télécharger : ", 
-					"Ajout d'un téléchargement", 
-					JOptionPane.DEFAULT_OPTION);
-			
-			if (newUrl != null && newUrl.length() > 0)
-			{
-				// TODO : Verif destination
-				String savePath = JOptionPane.showInputDialog(
-						this, 
-						"Entrer la destination du fichier : ", 
-						"Destination", 
-						JOptionPane.DEFAULT_OPTION);
-				
-				if (savePath != null && savePath.length() > 0)
-				{
-					try
-					{
-						this.appDownload.addDownload(newUrl, savePath);
-					}
-					catch (MalformedURLException e)
-					{
-						JOptionPane.showMessageDialog(this, e.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
-						e.printStackTrace();
-					}
-					
-					needUpdate = true;
-				}
-				else
-				{
-					JOptionPane.showMessageDialog(this, "Il y une erreur avec la destination entrée.", "Erreur", JOptionPane.ERROR_MESSAGE);
-				}
-			}
-			else
-			{
-				JOptionPane.showMessageDialog(this, "Il y a une erreur avec l'adresse entrée.", "Erreur", JOptionPane.ERROR_MESSAGE);
-			}
+			this.showAddDialog();
+			needUpdate = true;
 		}
 		else if (evt.getActionCommand().equals("DELETE"))
 		{
@@ -163,7 +187,7 @@ public class AppFrame extends JFrame implements ActionListener, ComponentListene
 		
 		if (needUpdate)
 		{
-			((DownloadTableModel) this.downloadsTable.getModel()).fireTableDataChanged();
+			this.updateTable();
 		}
 	}
 	
