@@ -8,9 +8,17 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JToolBar;
 
+/**
+ * La classe AppToolBar crée une barre d'outils permettant d'interagir
+ * avec le programme de téléchargement.
+ * 
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
+ * 
+ */
 public class AppToolBar extends JToolBar
 {
-	// Images utilisŽes par la classe pour les boutons
+	// Images utilisées par la classe pour les boutons
 	private static BufferedImage addImage = null;
 	private static BufferedImage removeImage = null;
 	private static BufferedImage moveUpImage = null;
@@ -40,24 +48,44 @@ public class AppToolBar extends JToolBar
     	}
     }
 	
+	// Objet parent
 	private AppFrame parent;
+	
+	// Bouton pour ajouter un téléchargement
 	private JButton addButton;
+	
+	// Bouton pour suprimmer un téléchargement
 	private JButton removeButton;
+	
+	// Bouton pour déplacer un téléchargement vers le haut
 	private JButton moveUpButton;
+	
+	// Bouton pour déplacer un téléchargement vers le bas
 	private JButton moveDownButton;
+	
+	// Bouton pour arrêter un téléchargement
 	private JButton stopButton;
+	
+	// Bouton pour démarrer un téléchargement
 	private JButton startButton;
 	
+	/**
+	 * Crée une nouvelle barre d'outils.
+	 * 
+	 * @param parent l'AppFrame qui contient la barre d'outils
+	 */
 	public AppToolBar(AppFrame parent)
 	{
 		super();
 		
 		this.parent = parent;
-		
-		this.setFloatable(false);
+
+		this.setFloatable(false);		
+		// Initialise les composants
 		this.initComponents();
 	}
 	
+	// Initialise les composants
 	public void initComponents()
 	{
 		this.addButton = new JButton();
@@ -105,6 +133,7 @@ public class AppToolBar extends JToolBar
 		this.add(this.moveUpButton);
 		this.add(this.moveDownButton);
 		
+		// Spécifie les écouteurs pour les boutons
 		this.addButton.addActionListener(this.parent);
 		this.removeButton.addActionListener(this.parent);
 		this.moveUpButton.addActionListener(this.parent);
