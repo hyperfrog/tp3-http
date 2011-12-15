@@ -13,15 +13,16 @@ import javax.swing.table.AbstractTableModel;
  */
 public class DownloadTableModel extends AbstractTableModel
 {
-	// 
+	// Titre des colonnes
 	private String[] columnNames = {"Adresse Url", "Taille", "État"};
 	
-	// 
+	// Liste des téléchargements
 	private List<DownloadThread> downloadsList;
 	
 	/**
+	 * Créer un nouveau modèle pour le tableau.
 	 * 
-	 * @param data
+	 * @param data la liste à utiliser comme données
 	 */
 	public DownloadTableModel(List<DownloadThread> data)
 	{
@@ -29,7 +30,9 @@ public class DownloadTableModel extends AbstractTableModel
 	}
 	
 	/**
+	 * Retourne le nombre de colonnes.
 	 * 
+	 * @return le nombre de colonnes
 	 */
 	public int getColumnCount()
 	{
@@ -37,7 +40,9 @@ public class DownloadTableModel extends AbstractTableModel
 	}
 	
 	/**
+	 * Retourne le nombre de rangées.
 	 * 
+	 * @return le nombre de rangées
 	 */
 	public int getRowCount()
 	{
@@ -45,7 +50,11 @@ public class DownloadTableModel extends AbstractTableModel
 	}
 	
 	/**
+	 * Retourne la nom de la colonne pour l'indice de la colonne
+	 * passé en paramètre.
 	 * 
+	 * @param col l'indice de la colonne
+	 * @return le nom de la colonne
 	 */
 	public String getColumnName(int col)
 	{
@@ -53,7 +62,12 @@ public class DownloadTableModel extends AbstractTableModel
 	}
 	
 	/**
+	 * Retourne la valeur de la case du tableau situé à la rangée et la colonne
+	 * passés en paramètre.
 	 * 
+	 * @param row l'indice de la rangée
+	 * @param col l'indice de la colonne
+	 * @return value la valeur de la case du tableau
 	 */
 	public Object getValueAt(int row, int col)
 	{

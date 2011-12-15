@@ -6,13 +6,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.io.File;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -48,8 +47,11 @@ public class AppAddDialog extends JDialog implements ActionListener, WindowListe
 	// Label contenant «Destination : »
 	private JLabel destinationLabel;
 	
-	// TextField pour entrer la destination du fichier
+	// TextField pour afficher la destination du fichier
 	private JTextField destinationField;
+	
+	// Bouton pour choisir la destination du fichier
+	private JButton destinationButton;
 	
 	// Panneau contenant les boutons
 	private JPanel buttonsPanel;
@@ -95,6 +97,7 @@ public class AppAddDialog extends JDialog implements ActionListener, WindowListe
 		this.destinationPanel = new JPanel();
 		this.destinationLabel = new JLabel();
 		this.destinationField = new JTextField();
+		this.destinationButton = new JButton();
 		this.buttonsPanel = new JPanel();
 		this.addButton = new JButton();
 		this.cancelButton = new JButton();
@@ -103,9 +106,9 @@ public class AppAddDialog extends JDialog implements ActionListener, WindowListe
 		
 		this.urlPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
 		
-		this.urlLabel.setText("Adresse URL à ajouter : ");
+		this.urlLabel.setText("Adresse URL : ");
 		
-		this.urlField.setColumns(30);
+		this.urlField.setColumns(40);
 		
 		this.urlPanel.add(this.urlLabel);
 		this.urlPanel.add(this.urlField);
@@ -115,9 +118,14 @@ public class AppAddDialog extends JDialog implements ActionListener, WindowListe
 		this.destinationLabel.setText("Destination : ");
 		
 		this.destinationField.setColumns(30);
+		this.destinationField.setEditable(false);
+		
+		this.destinationButton.setText("Parcourir...");
+		this.destinationButton.setActionCommand("BROWSE");
 		
 		this.destinationPanel.add(this.destinationLabel);
 		this.destinationPanel.add(this.destinationField);
+		this.destinationPanel.add(this.destinationButton);
 		
 		this.fieldsPanel.add(this.urlPanel, BorderLayout.NORTH);
 		this.fieldsPanel.add(this.destinationPanel, BorderLayout.SOUTH);
@@ -139,6 +147,7 @@ public class AppAddDialog extends JDialog implements ActionListener, WindowListe
         // Spécifie les écouteurs d'action pour les boutons
 		this.addButton.addActionListener(this);
 		this.cancelButton.addActionListener(this);
+		this.destinationButton.addActionListener(this);
 	}
 	
 	// Ferme la boîte de dialogue
@@ -146,6 +155,25 @@ public class AppAddDialog extends JDialog implements ActionListener, WindowListe
 	{
 		this.setVisible(false);
 		this.dispose();
+	}
+	
+	// Ouvre une boîte de dialogue pour choisir le dossier de destination
+	private void chooseSavePath()
+	{
+		JFileChooser fc = new JFileChooser();
+		fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		
+	    if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) 
+	    {
+	    	String savePath = fc.getSelectedFile().getAbsolutePath();
+	    	
+	    	if (!savePath.endsWith(System.getProperties().getProperty("file.separator")))
+	    	{
+	    		savePath += System.getProperties().getProperty("file.separator");
+	    	}
+	    	
+	    	this.destinationField.setText(savePath);
+	    }
 	}
 	
 	// Vérifie la validité du dossier de destination et créer les dossier manquants
@@ -157,47 +185,37 @@ public class AppAddDialog extends JDialog implements ActionListener, WindowListe
 		}
 		else
 		{
+			boolean isValid = true;
+			
 			URL newUrl = null;
 			try
 			{
 				newUrl = new URL(this.urlField.getText());
+				
+				// L'adresse n'est pas valide si il n'y a pas de fichier à la fin de l'adresse URL
+				if (!newUrl.getFile().equals(newUrl.getPath()))
+				{
+					isValid = false;
+				}
+				
+				if (isValid)
+				{
+					// Ajoute l'adresse
+					this.parent.getAppDownload().addDownload(this.urlField.getText(), this.destinationField.getText());
+					
+					// Ferme la boîte de dialogue
+					this.close();
+				}
 			}
 			catch (MalformedURLException e)
 			{
-				JOptionPane.showMessageDialog(this, "L'adresse URL entrée n'est pas valide.", "Erreur", JOptionPane.ERROR_MESSAGE);
+				isValid = false;
 				e.printStackTrace();
 			}
 			
-			if (newUrl != null)
+			if (!isValid)
 			{
-				File dest = new File(this.destinationField.getText());
-				
-				String savePath = null;
-				try
-				{
-					// Vérifie que le chemin ne contient pas de caractères illégaux
-					savePath = dest.getCanonicalPath();
-				}
-				catch (IOException e)
-				{
-					JOptionPane.showMessageDialog(this, "La destination n'est pas valide.", "Erreur", JOptionPane.ERROR_MESSAGE);
-					e.printStackTrace();
-				}
-				
-				// Récupère le chemin sans fichier à la fin
-				File finalDest = new File(new File(savePath).getParent());
-				
-				// Si des répertoires sont manquant alors on les créer.
-				if (!finalDest.exists())
-				{
-					finalDest.mkdirs();
-				}
-				
-				// Ajoute l'adresse
-				this.parent.getAppDownload().addDownload(this.urlField.getText(), finalDest.getParent() + "\\");
-				
-				// Ferme la boîte de dialogue
-				this.close();
+				JOptionPane.showMessageDialog(this, "L'adresse URL entrée n'est pas valide.", "Erreur", JOptionPane.ERROR_MESSAGE);
 			}
 		}
 	}
@@ -220,6 +238,10 @@ public class AppAddDialog extends JDialog implements ActionListener, WindowListe
 		else if (evt.getActionCommand().equals("CANCEL"))
 		{
 			this.close();
+		}
+		else if (evt.getActionCommand().equals("BROWSE"))
+		{
+			this.chooseSavePath();
 		}
 	}
 	

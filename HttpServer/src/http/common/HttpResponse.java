@@ -10,7 +10,7 @@ import java.nio.charset.Charset;
 
 public class HttpResponse
 {
-	private static final int KB_PER_SECOND = 50; 
+	private static final int KB_PER_SECOND = 50;
 
 	private HttpResponseHeader header;
 	private byte[] content;
@@ -33,7 +33,7 @@ public class HttpResponse
 		this.isCacheable = true;
 		this.isContentSendable = true;
 	}
-
+	
 	/**
 	 * Envoie la réponse HTTP sur la stream de sortie passée en paramètre. 
 	 * 
@@ -92,7 +92,9 @@ public class HttpResponse
 	{
 		if (this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
 		{
-			File outputFile = new File(this.fileName + ".tmp");
+			File tempName = new File(this.fileName);
+			
+			File outputFile = File.createTempFile(tempName.getName(), ".tmp");
 			
 			FileOutputStream fos = new FileOutputStream(outputFile);
 			

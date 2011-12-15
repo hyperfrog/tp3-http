@@ -12,17 +12,41 @@ import http.common.HttpResponse;
 import http.common.HttpResponseHeader;
 
 /**
- * La classe DownloadThread
+ * La classe DownloadThread créer un nouveau thread qui sert à télécharger un fichier
+ * et le sauvegarder sur l'ordinateur.
  * 
  * @author Christian Lesage
  * @author Alexandre Tremblay
  *
  */
-public class DownloadThread extends Thread
+public class DownloadThread implements Runnable
 {
 	// Tous les états possible du téléchargement
-	// TODO : Ajouter un texte associé avec chaque état pour l'affichage dans le tableau
-	public static enum DownloadState {NEW, DOWNLOADING, DONE, RETRYING, WAITING, ERROR, NOT_FOUND, FORBIDDEN};
+	public static enum DownloadState
+	{
+		NEW ("Nouveau téléchargement"), 
+		DOWNLOADING ("Téléchargement en cours..."), 
+		DONE ("Terminé"), 
+		RETRYING (String.format("Renvoi de la requête dans %d secondes", RETRY_WAIT_TIME / 1000)), 
+		WAITING ("En attente..."), 
+		ERROR ("Erreur"), 
+		NOT_FOUND ("Page introuvable"), 
+		FORBIDDEN ("Accès interdit"),
+		STOPPED ("Arrêté");
+		
+		private final String message;
+		
+		DownloadState(String message)
+		{
+			this.message = message;
+		}
+		
+		@Override
+		public String toString()
+		{
+			return this.message;
+		}
+	};
 	
 	// Le «user-agent» utilisé pour signifier que c'est l'outils de téléchargement
 	private static final String USER_AGENT = "HttpClient Downloader";
@@ -71,7 +95,6 @@ public class DownloadThread extends Thread
 		this.urlName = path.toExternalForm();
 		this.currentState = DownloadState.NEW;
 		
-		// TODO : Problème lorsque l'adresse URL ne termine pas par un fichier. À corriger.
 		this.fileName = path.getPath().substring(path.getPath().lastIndexOf("/") + 1, path.getPath().lastIndexOf("."));
 		this.extName = path.getPath().substring(path.getPath().lastIndexOf(".") + 1, path.getPath().length());		
 		
@@ -146,42 +169,40 @@ public class DownloadThread extends Thread
 					HttpResponseHeader responseHeader = this.response.getHeader();
 					responseHeader.receive(this.socket.getInputStream());
 					
-					
 					try
 					{
 						// Tente de parser le header
 						responseHeader.parse();
-					
-						this.fileSize = Integer.parseInt(responseHeader.getField("Content-Length"));
 						
 						// Si on reçoit un code 404, la page n'existe pas
-						if (this.response.getHeader().getStatusCode() == 404 || fileSize <= 0)
+						if (responseHeader.getStatusCode() == 404)
 						{
 							this.setCurrentState(DownloadState.NOT_FOUND);
 							retry = false;
 						}
 						// Si on reçoit un code 403, c'est peut-être un répertoire ou l'accès est interdit
-						else if (this.response.getHeader().getStatusCode() == 403)
+						else if (responseHeader.getStatusCode() == 403)
 						{
 							this.setCurrentState(DownloadState.FORBIDDEN);
 							retry = false;
 						}
 						// Si on reçoit un code 501, on demande un protocol non implémenté
-						else if (this.response.getHeader().getStatusCode() == 501)
+						else if (responseHeader.getStatusCode() == 501)
 						{
 							this.setCurrentState(DownloadState.ERROR);
 							retry = false;
 						}
 						// Si on reçoit un code 500, le serveur est dans les patates, 
 						// alors on essaie de nouveau plus tard
-						else if (this.response.getHeader().getStatusCode() == 500)
+						else if (responseHeader.getStatusCode() == 500)
 						{
 							this.setCurrentState(DownloadState.ERROR);
 							retry = true;
 						}
-						
 						else
 						{
+							this.fileSize = Integer.parseInt(responseHeader.getField("Content-Length"));
+							
 							File f = new File(this.savePath + this.fileName + "." + this.extName);
 							
 							// On renomme le fichier en ajoutant «(i)» à la fin du nom du fichier
@@ -202,6 +223,7 @@ public class DownloadThread extends Thread
 							this.setCurrentState(DownloadState.DOWNLOADING);
 							
 							// Effectue la sauvegarde
+							// TODO : Le début du fichier n'est pas sauvegardé
 							this.response.receiveContent(this.socket.getInputStream());
 							
 							this.setCurrentState(DownloadState.DONE);
@@ -293,6 +315,12 @@ public class DownloadThread extends Thread
 		if (newState != null)
 		{
 			this.currentState = newState;
+			
+//			if (newState.equals(DownloadState.STOPPED))
+//			{
+//				this.closeConnection();
+//			}
+			
 			this.appDownload.update(this);
 		}
 	}
