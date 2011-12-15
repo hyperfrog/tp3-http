@@ -35,18 +35,15 @@ public class HttpResponse
 	}
 
 	/**
-	 * Envoie la réponse HTTP dans la stream de sortie passée en paramètre. 
+	 * Envoie la réponse HTTP sur la stream de sortie passée en paramètre. 
 	 * 
-	 * @param os stream de sortie
-	 * @return vrai si la réponse a été envoyée avec succès, faux sinon
+	 * @param os OutputStream pour l'écriture de la réponse 
 	 * @throws IOException
 	 */
-	public boolean send(OutputStream os) throws IOException
+	public void send(OutputStream os) throws IOException, BadHeaderException
 	{
-		if (!this.header.send(os))
-		{
-			return false;
-		}
+		// Envoie le header
+		this.header.send(os);
 		
 		if (this.isContentSendable 
 				&& this.header.getField("Content-Length") != null 
@@ -83,16 +80,15 @@ public class HttpResponse
 				os.flush();
 			}
 		}
-		return true;
 	}
 	
 	/**
+	 * Reçoit la partie contenu d'une réponse HTTP.
 	 * 
-	 * @param os
-	 * @return
+	 * @param is InputStream pour la lecture du contenu de la réponse
 	 * @throws IOException
 	 */
-	public boolean receiveContent(InputStream is) throws IOException
+	public void receiveContent(InputStream is) throws IOException
 	{
 		if (this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
 		{
@@ -121,8 +117,6 @@ public class HttpResponse
 			
 			outputFile.renameTo(new File(this.fileName));
 		}
-		
-		return true;
 	}
 	
 	/**

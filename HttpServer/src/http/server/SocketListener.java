@@ -2,8 +2,6 @@ package http.server;
 
 import static util.BasicString.stringToMap;
 
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -21,6 +19,13 @@ import http.common.HttpResponse;
 import http.server.event.RequestEvent;
 import http.server.event.RequestEventProcessor;
 
+/**
+ * La classe SocketListener agit comme un répartiteur qui accepte les connexions entrantes  
+ * et crée pour chacune un thread pour l'exécution d'une instance de serveur HTTP. 
+ * 
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
+ */
 public class SocketListener implements RequestEventProcessor, Runnable
 {
 	// Nom du fichier contenant la liste des extensions et des types MIME correspondants
@@ -49,6 +54,14 @@ public class SocketListener implements RequestEventProcessor, Runnable
 	
 	private volatile Thread runThread;
 	
+	/**
+	 * Construit un écouteur de connexions entrantes.
+	 * 
+	 * @param serverPath Chemin absolu du dossier où se trouvent les fichiers nécessaires au serveur
+	 * @param siteFolder Chemin relatif du dossier où se trouvent les fichiers du site Web à servir
+	 * @param ipAddress Addresse IP utilisée pour les connexions entrantes
+	 * @param portNum Port utilisé pour les connexions entrantes
+	 */
 	public SocketListener(String serverPath, String siteFolder, String ipAddress, int portNum)
 	{
 		this.serverPath = serverPath;
@@ -56,6 +69,7 @@ public class SocketListener implements RequestEventProcessor, Runnable
 		this.ipAddress = ipAddress;
 		this.portNum = portNum;
 		
+		// Lecture du fichiers des types MIME à la première instanciation de la classe
 		if (SocketListener.mimeTypes == null)
 		{
 			// Read MIME types
@@ -73,7 +87,7 @@ public class SocketListener implements RequestEventProcessor, Runnable
 			}
 			catch (IOException e)
 			{
-				System.err.println("Problem reading MIME types: " + e.getMessage());
+				System.err.println("Problème de lecture du fichier des types MIME : " + e.getMessage());
 			}
 			finally
 			{
@@ -85,16 +99,22 @@ public class SocketListener implements RequestEventProcessor, Runnable
 		}
 	}
 	
+	/**
+	 * Arrête le thread lié à cet objet.
+	 */
 	public void stop()
 	{
 		Thread tmpRunThread = this.runThread;
 		this.runThread = null;
 		if (tmpRunThread != null)
 		{
-			tmpRunThread.interrupt();
+//			tmpRunThread.interrupt();
 		}
 	}
-
+	
+	/* (non-Javadoc)
+	 * @see java.lang.Runnable#run()
+	 */
 	public void run()
 	{
         Thread myThread = Thread.currentThread();
@@ -103,6 +123,8 @@ public class SocketListener implements RequestEventProcessor, Runnable
 		try
 		{
 			ServerSocket listener = new ServerSocket(portNum, BACKLOG, InetAddress.getByName(ipAddress));
+			
+			// Programme un délai d'attente de connexion pour éviter un blocage
 			listener.setSoTimeout(100);
 			
 			Socket clientSocket;
@@ -116,31 +138,52 @@ public class SocketListener implements RequestEventProcessor, Runnable
 					
 					System.out.print(String.format("Il y a présentement %d thread(s) actif(s).\n\n", nbThreads));
 					
+					// Si le nombre max. de threads est atteint, attend un peu 
 					while (nbThreads >= MAX_THREADS)
 					{
-						try { Thread.sleep(50); } catch (InterruptedException unused) {}
+						try { Thread.sleep(100); } catch (InterruptedException unused) {}
 					}
 
+					// Crée un serveur pour le thread
 					HttpServerThread server = new HttpServerThread(clientSocket, serverPath, siteFolder, SocketListener.mimeTypes, this);
+					
+					// Crée le thread en mode daemon pour éviter qu'il reste vivant après une demande d'arrêt du serveur
 					Thread t = new Thread(server);
+					t.setDaemon(true);
 					t.start();
 				}
-				catch (SocketTimeoutException ste) {}
+				catch (SocketTimeoutException e)
+				{
+//					System.err.println("Délai de connexion dépassé à l'acceptation du socket :\n" + e.getMessage());
+//					e.printStackTrace();
+				}
+				catch (IOException e)
+				{
+					System.err.println("Erreur d'E/S à l'acceptation du socket :\n" + e.getMessage());
+					e.printStackTrace();
+				}
 			}
+			
+			System.out.println("Arrêt dans 3 secondes...");
+			try { Thread.sleep(3000); } catch (InterruptedException unused) {}
+
 		}
 		catch (IOException e)
 		{
-			System.out.println("IOException on socket listen: " + e.getMessage());
+			System.out.println("Erreur d'E/S à l'écoute du socket :\n" + e.getMessage());
 			e.printStackTrace();
 		}
 	}
 	
+	/* (non-Javadoc)
+	 * @see http.server.event.RequestEventProcessor#requestEventReceived(http.server.event.RequestEvent)
+	 */
 	@Override
 	public void requestEventReceived(RequestEvent evt)
 	{
-		HttpServerThread s = ((HttpServerThread)evt.getSource());
-		HttpRequest request = s.getRequest();
-		HttpResponse response = s.getResponse();
+		HttpServerThread thread = ((HttpServerThread)evt.getSource());
+		HttpRequest request = thread.getRequest();
+		HttpResponse response = thread.getResponse();
 		
 		String resourcePath = request.getHeader().getPath();
 		
@@ -167,19 +210,6 @@ public class SocketListener implements RequestEventProcessor, Runnable
 //			res.setContent(content, Charset.forName("ISO-8859-1"));
 			response.setContent(content, Charset.forName("UTF-8"));
 
-			response.getHeader().make();
-
-//			System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
-//			System.out.print(response.getHeader().getText());
-			try
-			{
-				response.send(s.getSocket().getOutputStream());
-			}
-			catch (IOException e)
-			{
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 		}
 		else if (resourcePath.equals("/admin"))
 		{
@@ -197,27 +227,13 @@ public class SocketListener implements RequestEventProcessor, Runnable
 			}
 
 			response.setContent(content, Charset.forName("ISO-8859-1"));
-//			response.setContent(content, Charset.forName("UTF-8"));
-
-			response.getHeader().make();
-
-//			System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
-//			System.out.print(response.getHeader().getText());
-
-			try
-			{
-				response.send(s.getSocket().getOutputStream());
-			}
-			catch (IOException e)
-			{
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 			
 			if (command != null && command.equals("shutdown"))
 			{
 				this.stop();
 			}
+			
+			try { Thread.sleep(500); } catch (InterruptedException unused) {}
 		}
 	}
 }

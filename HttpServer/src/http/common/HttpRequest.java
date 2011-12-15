@@ -18,20 +18,14 @@ public class HttpRequest
 	
 	/**
 	 * @param os
-	 * @return
 	 * @throws IOException
 	 */
-	public boolean send(OutputStream os) throws IOException
+	public void send(OutputStream os) throws IOException, BadHeaderException
 	{
 		// Envoie le header
-		if (!this.header.send(os))
-		{
-			return false;
-		}
+		this.header.send(os);
 		
-		// Rien d'autres à envoyer tant que POST et PUT ne sont pas implémentés
-		
-		return true;
+		// Rien d'autre à envoyer tant que POST et PUT ne sont pas implémentés
 	}
 	
 	/**

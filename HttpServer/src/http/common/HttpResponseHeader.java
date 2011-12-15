@@ -13,7 +13,10 @@ import java.util.regex.Pattern;
 import util.DateUtil;
 
 /**
- * @author Christian
+ * La classe HttpResponseHeader modélise une entête HTTP de réponse. 
+ * 
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
  *
  */
 public class HttpResponseHeader extends HttpHeader
@@ -40,37 +43,40 @@ public class HttpResponseHeader extends HttpHeader
 	/* (non-Javadoc)
 	 * @see http.common.HttpHeader#make()
 	 */
-	public boolean make()
+	public void make() throws BadHeaderException
 	{
-		if (statusCodeDescMap.containsKey(this.statusCode))
+		// Cas d'erreur
+		if (!statusCodeDescMap.containsKey(this.statusCode))
 		{
-			this.fields.put("Date", DateUtil.formatDate(new Date()));
-			if (!this.isCacheable) 
-			{
-				this.fields.put("Expires", this.fields.get("Date"));
-				this.fields.put("Cache-Control", "max-age=0, must-revalidate");
-			}
-
-			this.text = String.format("%s %d %s\r\n", this.protocol, this.statusCode, statusCodeDescMap.get(this.statusCode));
-
-			for (String field : this.fields.keySet())
-			{
-				this.text += String.format("%s: %s\r\n", field, this.fields.get(field));
-			}
-			this.text += "\r\n";
-			
-			return true;
+			throw new BadHeaderException("Code de statut inexistant.");
 		}
-		return false;
+		else if (this.protocol == null || this.protocol.isEmpty())
+		{
+			throw new BadHeaderException("Mauvais protocole.");
+		}
+
+		this.fields.put("Date", DateUtil.formatDate(new Date()));
+
+		if (!this.isCacheable) 
+		{
+			this.fields.put("Expires", this.fields.get("Date"));
+			this.fields.put("Cache-Control", "max-age=0, must-revalidate");
+		}
+
+		this.text = String.format("%s %d %s\r\n", this.protocol, this.statusCode, statusCodeDescMap.get(this.statusCode));
+
+		for (String field : this.fields.keySet())
+		{
+			this.text += String.format("%s: %s\r\n", field, this.fields.get(field));
+		}
+		this.text += "\r\n";
 	}
 
 	/* (non-Javadoc)
 	 * @see http.common.HttpHeader#parse()
 	 */
-	public boolean parse()
+	public void parse() throws BadHeaderException
 	{
-		boolean success = true;
-		
 		if (this.text != null) 
 		{
 			ArrayList<String> headerLines = split(this.text, "\r\n", true);
@@ -88,7 +94,7 @@ public class HttpResponseHeader extends HttpHeader
 				}
 				catch (NumberFormatException e)
 				{
-					success = false;
+					throw new BadHeaderException("Code de statut inexistant.");
 				}
 
 				this.statusCodeDesc = mFullRequest.group(3);
@@ -98,9 +104,11 @@ public class HttpResponseHeader extends HttpHeader
 					this.parseFields(headerLines.subList(1, headerLines.size()));
 				}
 			}
+			else
+			{
+				throw new BadHeaderException("Entête mal formée.");
+			}
 		}
-		
-		return success;
 	}
 
 	/**
