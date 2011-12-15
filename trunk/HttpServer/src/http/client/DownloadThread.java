@@ -158,18 +158,28 @@ public class DownloadThread extends Thread
 						if (this.response.getHeader().getStatusCode() == 404 || fileSize <= 0)
 						{
 							this.setCurrentState(DownloadState.NOT_FOUND);
+							retry = false;
 						}
 						// Si on reçoit un code 403, c'est peut-être un répertoire ou l'accès est interdit
 						else if (this.response.getHeader().getStatusCode() == 403)
 						{
 							this.setCurrentState(DownloadState.FORBIDDEN);
+							retry = false;
 						}
-						// Si on reçoit un code 403, il y a une erreur dans la requête
 						// Si on reçoit un code 501, on demande un protocol non implémenté
-						else if (this.response.getHeader().getStatusCode() == 501 || this.response.getHeader().getStatusCode() == 403)
+						else if (this.response.getHeader().getStatusCode() == 501)
 						{
 							this.setCurrentState(DownloadState.ERROR);
+							retry = false;
 						}
+						// Si on reçoit un code 500, le serveur est dans les patates, 
+						// alors on essaie de nouveau plus tard
+						else if (this.response.getHeader().getStatusCode() == 500)
+						{
+							this.setCurrentState(DownloadState.ERROR);
+							retry = true;
+						}
+						
 						else
 						{
 							File f = new File(this.savePath + this.fileName + "." + this.extName);
