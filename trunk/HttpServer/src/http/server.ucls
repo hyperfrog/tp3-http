@@ -10,7 +10,7 @@
   </class>  
   <class id="2" corner="BOTTOM_RIGHT" language="java" name="http.common.HttpRequestHeader" project="HttpServer" 
     file="/HttpServer/src/http/common/HttpRequestHeader.java" binary="false">    
-    <position height="-1" width="-1" x="1042" y="460"/>    
+    <position height="-1" width="-1" x="1035" y="464"/>    
     <display autosize="true" package="true" initial-value="false" signature="true" visibility="true">      
       <attributes public="true" package="true" protected="true" private="true"/>      
       <operations public="true" package="true" protected="true" private="true"/>    
@@ -18,7 +18,7 @@
   </class>  
   <class id="3" corner="BOTTOM_RIGHT" language="java" name="http.common.HttpResponseHeader" project="HttpServer" 
     file="/HttpServer/src/http/common/HttpResponseHeader.java" binary="false">    
-    <position height="-1" width="-1" x="1033" y="98"/>    
+    <position height="-1" width="-1" x="1037" y="141"/>    
     <display autosize="true" package="true" initial-value="false" signature="true" visibility="true">      
       <attributes public="true" package="true" protected="true" private="true"/>      
       <operations public="true" package="true" protected="true" private="true"/>    
@@ -26,7 +26,7 @@
   </class>  
   <class id="4" corner="BOTTOM_RIGHT" language="java" name="http.common.HttpResponse" project="HttpServer" 
     file="/HttpServer/src/http/common/HttpResponse.java" binary="false">    
-    <position height="-1" width="-1" x="781" y="150"/>    
+    <position height="-1" width="-1" x="782" y="142"/>    
     <display autosize="true" package="true" initial-value="false" signature="true" visibility="true">      
       <attributes public="true" package="true" protected="true" private="true"/>      
       <operations public="true" package="true" protected="true" private="true"/>    
@@ -66,7 +66,7 @@
   </class>  
   <interface id="9" corner="BOTTOM_RIGHT" language="java" name="http.server.event.RequestEventProcessor" 
     project="HttpServer" file="/HttpServer/src/http/server/event/RequestEventProcessor.java" binary="false">    
-    <position height="-1" width="-1" x="176" y="363"/>    
+    <position height="-1" width="-1" x="135" y="371"/>    
     <display autosize="true" package="true" initial-value="false" signature="true" visibility="true">      
       <attributes public="true" package="true" protected="true" private="true"/>      
       <operations public="true" package="true" protected="true" private="true"/>    
@@ -74,77 +74,14 @@
   </interface>  
   <class id="10" corner="BOTTOM_RIGHT" language="java" name="http.server.event.RequestEvent" project="HttpServer" 
     file="/HttpServer/src/http/server/event/RequestEvent.java" binary="false">    
-    <position height="-1" width="-1" x="462" y="361"/>    
+    <position height="-1" width="-1" x="356" y="365"/>    
     <display autosize="true" package="true" initial-value="false" signature="true" visibility="true">      
       <attributes public="true" package="true" protected="true" private="true"/>      
       <operations public="true" package="true" protected="true" private="true"/>    
     </display>  
   </class>  
-  <dependency>    
-    <end type="SOURCE" nodeId="8"/>    
-    <end type="TARGET" nodeId="7"/>  
-  </dependency>  
-  <dependency>    
-    <end type="SOURCE" nodeId="7"/>    
-    <end type="TARGET" nodeId="5"/>  
-  </dependency>  
-  <realization>    
-    <end type="SOURCE" nodeId="7"/>    
-    <end type="TARGET" nodeId="9"/>  
-  </realization>  
   <association>    
-    <end type="SOURCE" nodeId="6" navigable="false">      
-      <attribute name="evtProcessor"/>      
-      <multiplicity minimum="0" maximum="1"/>    
-    </end>    
-    <end type="TARGET" nodeId="9" navigable="true"/>    
-    <display labels="true" multiplicity="true"/>  
-  </association>  
-  <association>    
-    <end type="SOURCE" nodeId="6" navigable="false">      
-      <attribute name="response"/>      
-      <multiplicity minimum="0" maximum="1"/>    
-    </end>    
-    <end type="TARGET" nodeId="4" navigable="true"/>    
-    <display labels="true" multiplicity="true"/>  
-  </association>  
-  <association>    
-    <end type="SOURCE" nodeId="6" navigable="false">      
-      <attribute name="request"/>      
-      <multiplicity minimum="0" maximum="1"/>    
-    </end>    
-    <end type="TARGET" nodeId="5" navigable="true"/>    
-    <display labels="true" multiplicity="true"/>  
-  </association>  
-  <dependency>    
-    <end type="SOURCE" nodeId="6"/>    
-    <end type="TARGET" nodeId="10"/>  
-  </dependency>  
-  <association>    
-    <end type="SOURCE" nodeId="4" navigable="false">      
-      <attribute name="header"/>      
-      <multiplicity minimum="0" maximum="1"/>    
-    </end>    
-    <end type="TARGET" nodeId="3" navigable="true"/>    
-    <display labels="true" multiplicity="true"/>  
-  </association>  
-  <dependency>    
-    <end type="SOURCE" nodeId="9"/>    
-    <end type="TARGET" nodeId="10"/>  
-  </dependency>  
-  <dependency>    
-    <end type="SOURCE" nodeId="7"/>    
-    <end type="TARGET" nodeId="6"/>  
-  </dependency>  
-  <generalization>    
-    <end type="SOURCE" nodeId="3"/>    
-    <end type="TARGET" nodeId="1"/>  
-  </generalization>  
-  <dependency>    
-    <end type="SOURCE" nodeId="7"/>    
-    <end type="TARGET" nodeId="10"/>  
-  </dependency>  
-  <association>    
+    <bendpoint x="885" y="464"/>    
     <end type="SOURCE" nodeId="5" navigable="false">      
       <attribute name="header"/>      
       <multiplicity minimum="0" maximum="1"/>    
@@ -156,10 +93,75 @@
     <end type="SOURCE" nodeId="7"/>    
     <end type="TARGET" nodeId="4"/>  
   </dependency>  
+  <association>    
+    <end type="SOURCE" nodeId="6" navigable="false">      
+      <attribute name="response"/>      
+      <multiplicity minimum="0" maximum="1"/>    
+    </end>    
+    <end type="TARGET" nodeId="4" navigable="true"/>    
+    <display labels="true" multiplicity="true"/>  
+  </association>  
+  <dependency>    
+    <bendpoint x="463" y="410"/>    
+    <bendpoint x="463" y="330"/>    
+    <end type="SOURCE" nodeId="7"/>    
+    <end type="TARGET" nodeId="6"/>  
+  </dependency>  
+  <realization>    
+    <end type="SOURCE" nodeId="7"/>    
+    <end type="TARGET" nodeId="9"/>  
+  </realization>  
   <generalization>    
     <end type="SOURCE" nodeId="2"/>    
     <end type="TARGET" nodeId="1"/>  
   </generalization>  
+  <generalization>    
+    <end type="SOURCE" nodeId="3"/>    
+    <end type="TARGET" nodeId="1"/>  
+  </generalization>  
+  <association>    
+    <bendpoint x="610" y="261"/>    
+    <bendpoint x="610" y="423"/>    
+    <end type="SOURCE" nodeId="6" navigable="false">      
+      <attribute name="request"/>      
+      <multiplicity minimum="0" maximum="1"/>    
+    </end>    
+    <end type="TARGET" nodeId="5" navigable="true"/>    
+    <display labels="true" multiplicity="true"/>  
+  </association>  
+  <dependency>    
+    <end type="SOURCE" nodeId="9"/>    
+    <end type="TARGET" nodeId="10"/>  
+  </dependency>  
+  <association>    
+    <end type="SOURCE" nodeId="4" navigable="false">      
+      <attribute name="header"/>      
+      <multiplicity minimum="0" maximum="1"/>    
+    </end>    
+    <end type="TARGET" nodeId="3" navigable="true"/>    
+    <display labels="true" multiplicity="true"/>  
+  </association>  
+  <association>    
+    <bendpoint x="136" y="285"/>    
+    <end type="SOURCE" nodeId="6" navigable="false">      
+      <attribute name="evtProcessor"/>      
+      <multiplicity minimum="0" maximum="1"/>    
+    </end>    
+    <end type="TARGET" nodeId="9" navigable="true"/>    
+    <display labels="true" multiplicity="true"/>  
+  </association>  
+  <dependency>    
+    <end type="SOURCE" nodeId="8"/>    
+    <end type="TARGET" nodeId="7"/>  
+  </dependency>  
+  <dependency>    
+    <end type="SOURCE" nodeId="7"/>    
+    <end type="TARGET" nodeId="5"/>  
+  </dependency>  
+  <dependency>    
+    <end type="SOURCE" nodeId="7"/>    
+    <end type="TARGET" nodeId="10"/>  
+  </dependency>  
   <classifier-display autosize="true" package="true" initial-value="false" signature="true" visibility="true">    
     <attributes public="true" package="true" protected="true" private="true"/>    
     <operations public="true" package="true" protected="true" private="true"/>  

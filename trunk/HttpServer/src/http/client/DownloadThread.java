@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 
+import http.common.BadHeaderException;
 import http.common.HttpRequest;
 import http.common.HttpResponse;
 import http.common.HttpResponseHeader;
@@ -135,20 +136,22 @@ public class DownloadThread extends Thread
 					this.openConnection();
 				}
 				
-				// Envoi la requête
-				if (this.request.send(this.socket.getOutputStream()))
+				try
 				{
+					// Envoi la requête
+					this.request.send(this.socket.getOutputStream());
+
 					// Attend de recevoir un header pour la réponse
 					this.response = new HttpResponse();
 					HttpResponseHeader responseHeader = this.response.getHeader();
 					responseHeader.receive(this.socket.getInputStream());
 					
-					// Tente de parser le header
-					boolean responseIsGood = responseHeader.parse();
 					
-					// Si la réponse est bien formée
-					if (responseIsGood)
+					try
 					{
+						// Tente de parser le header
+						responseHeader.parse();
+					
 						this.fileSize = Integer.parseInt(responseHeader.getField("Content-Length"));
 						
 						// Si on reçoit un code 404, la page n'existe pas
@@ -196,16 +199,27 @@ public class DownloadThread extends Thread
 						
 						retry = false;
 					}
+					catch (BadHeaderException e)
+					{
+						System.err.println("He's a bad, bad server. No cookies for him today.");
+					}
+					
+				}
+				catch (BadHeaderException e)
+				{
+					System.err.println("I'm a bad, bad client. No cookies for me today.");
+					this.setCurrentState(DownloadState.ERROR);
+					retry = false;
 				}
 				
+				this.closeConnection();
+
 				// Si il y a eu une erreur lors de l'envoi de la requête on réessait d'envoyer la requête
 				if (retry)
 				{
 					this.setCurrentState(DownloadState.RETRYING);
 					this.sleepFor(DownloadThread.RETRY_WAIT_TIME);
 				}
-				
-				this.closeConnection();
 			}
 			while (retry);
 		}
@@ -305,7 +319,7 @@ public class DownloadThread extends Thread
 	 */
 	public static String byteToStringRepresentation(long bytes)
 	{
-		int unit = 1000;
+		int unit = 1024;
 		
 		if (bytes < unit)
 		{

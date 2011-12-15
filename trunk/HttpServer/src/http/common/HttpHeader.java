@@ -17,7 +17,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * @author Christian
+ * La classe HttpHeader modélise ce qu'il y a de commun aux entêtes HTTP de requête et de réponse. 
+ * 
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
  *
  */
 public abstract class HttpHeader
@@ -91,25 +94,23 @@ public abstract class HttpHeader
 	}
 	
 	/**
-	 * @return
+	 * Analyse l'entête de la requête ou de la réponse reçue et la décompose en éléments.
 	 */
-	public abstract boolean parse();
+	public abstract void parse() throws BadHeaderException;
 	
 	/**
-	 * Fabrique un header HTTP pour la requête ou la réponse.
+	 * Fabrique une entête HTTP pour la requête ou la réponse à envoyer.
+	 */
+	public abstract void make() throws BadHeaderException;
+	
+	/**
+	 * Reçoit un header sur la stream d'entrée spécifiée.
 	 * 
-	 * @return vrai si le header a pu être fabriqué, faux sinon
-	 */
-	public abstract boolean make();
-	
-	/**
-	 * @param is
+	 * @param is InputStream pour la lecture du header
 	 * @throws IOException
 	 */
 	public void receive(InputStream is) throws IOException
 	{
-//		System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
-
 		BufferedReader in = new BufferedReader(new InputStreamReader(is));
 
 		String headerText = new String();
@@ -124,30 +125,28 @@ public abstract class HttpHeader
 		} while (line != null && !line.isEmpty());
 
 		this.text = headerText;
-		
-//		System.out.print(headerText);
 	}
 	
 	/**
-	 * @param os
-	 * @return
+	 * Envoie le header sur la stream de sortie spécifiée. 
+	 * 
+	 * @param os OutputStream pour l'écriture du header
 	 * @throws IOException
 	 */
-	public boolean send(OutputStream os) throws IOException
+	public void send(OutputStream os) throws IOException, BadHeaderException
 	{
-		if ((this.text == null || this.text.isEmpty()) && !this.make())
+		if (this.text == null || this.text.isEmpty())
 		{
-			return false;
+			 this.make();
 		}
 
 		OutputStreamWriter osw = new OutputStreamWriter(os);
 
 		osw.write(this.text);
 		osw.flush();
-		
-		return true;
 	}
 	
+	// Parse les champs du header
 	protected void parseFields(List<String> fieldLines)
 	{
 		Pattern pRequestFields = Pattern.compile("\\A([^:]+): (.+)\\Z");
@@ -164,8 +163,10 @@ public abstract class HttpHeader
 	}
 
 	/**
-	 * @param field
-	 * @param value
+	 * Programme la valeur d'un champ.
+	 * 
+	 * @param field champ à programmer
+	 * @param value valeur du champ
 	 */
 	public void setField(String field, String value)
 	{
@@ -173,8 +174,10 @@ public abstract class HttpHeader
 	}
 	
 	/**
-	 * @param field
-	 * @return
+	 * Retourne la valeur d'un champ.
+	 * 
+	 * @param field champ dont la valeur doit être retournée
+	 * @return valeur du champ spécifié
 	 */
 	public String getField(String field)
 	{
@@ -182,7 +185,9 @@ public abstract class HttpHeader
 	}
 	
 	/**
-	 * @return
+	 * Retourne l'ensemble des noms de champ du header.
+	 * 
+	 * @return ensemble des noms de champ du header
 	 */
 	public Set<String> getFieldKeySet()
 	{
@@ -190,23 +195,29 @@ public abstract class HttpHeader
 	}
 
 	/**
-	 * @return the header
+	 * Retourne la représentation textuelle du header.
+	 * 
+	 * @return représentation textuelle du header
 	 */
 	public String getText()
 	{
 		return text;
 	}
 
-	/**
-	 * @param text the text to set
-	 */
-	public void setText(String text)
-	{
-		this.text = text;
-	}
+//	/**
+//	 * 
+//	 * 
+//	 * @param text the text to set
+//	 */
+//	public void setText(String text)
+//	{
+//		this.text = text;
+//	}
 
 	/**
-	 * @return the protocol
+	 * Retourne le protocole spécifié dans la requête ou la réponse.
+	 *  
+	 * @return protocole spécifié dans la requête ou la réponse
 	 */
 	public String getProtocol()
 	{
@@ -214,7 +225,9 @@ public abstract class HttpHeader
 	}
 
 	/**
-	 * @param protocol the protocol to set
+	 * Programme le protocole à utiliser pour la requête ou la réponse.
+	 * 
+	 * @param protocole à utiliser pour la requête ou la réponse
 	 */
 	public void setProtocol(String protocol)
 	{

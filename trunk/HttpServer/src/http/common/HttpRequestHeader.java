@@ -19,7 +19,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * @author Christian
+ * La classe HttpResponseHeader modélise une entête HTTP de requête. 
+ * 
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
  *
  */
 public class HttpRequestHeader extends HttpHeader
@@ -56,18 +59,22 @@ public class HttpRequestHeader extends HttpHeader
 	/* (non-Javadoc)
 	 * @see http.common.HttpHeader#make()
 	 */
-	public boolean make()
+	public void make() throws BadHeaderException
 	{
 		String path = (this.fullPath == null || this.fullPath.isEmpty()) ? this.path : this.fullPath;
 
-		/* TODO: Si this.parameters n'est pas vide et que path ne contient pas de paramètres,
-		 * il faudrait ajouter les paramètres du dictionnaire au path
-		 */
-
 		// Cas d'erreur
-		if (path == null || path.isEmpty() || this.method == null || this.method.isEmpty() || this.protocol == null || this.protocol.isEmpty())
+		if (path == null || path.isEmpty())
 		{
-			return false;
+			throw new BadHeaderException("Mauvais chemin.");
+		}
+		else if (this.method == null || this.method.isEmpty())
+		{
+			throw new BadHeaderException("Mauvaise méthode.");
+		}
+		else if  (this.protocol == null || this.protocol.isEmpty())
+		{
+			throw new BadHeaderException("Mauvais protocole.");
 		}
 
 		this.text = String.format("%s %s %s\r\n", this.method , path, this.protocol);
@@ -77,17 +84,13 @@ public class HttpRequestHeader extends HttpHeader
 			this.text += String.format("%s: %s\r\n", field, this.fields.get(field));
 		}
 		this.text += "\r\n";
-
-		return true;
 	}
 	
 	/* (non-Javadoc)
 	 * @see http.common.HttpHeader#parse()
 	 */
-	public boolean parse()
+	public void parse() throws BadHeaderException
 	{
-		boolean success = false;
-		
 		if (this.text != null) 
 		{
 			ArrayList<String> headerLines = split(this.text, "\r\n", true);
@@ -119,26 +122,20 @@ public class HttpRequestHeader extends HttpHeader
 					this.parseGetParams(fullPathParts.get(1));
 				}
 
-				if (this.protocol.equals("HTTP/1.0"))
-				{
-					success = true;
-				}
-				
 				if (headerLines.size() > 1)
 				{
 					this.parseFields(headerLines.subList(1, headerLines.size()));
-					
-					if (this.protocol.equals("HTTP/1.1") && this.fields.containsKey("Host"))
-					{
-						success = true;
-					}
+				}
+
+				if (this.protocol.equals("HTTP/1.1") && !this.fields.containsKey("Host"))
+				{
+					throw new BadHeaderException("Entête incomplète. Le champ Host est obligatoire.");
 				}
 			}
 		}
-		
-		return success;
 	}
 	
+	// Parse les champs du header
 	@Override
 	protected void parseFields(List<String> fieldLines)
 	{
@@ -155,6 +152,7 @@ public class HttpRequestHeader extends HttpHeader
 		}
 	}
 
+	// Parse les paramètres GET de la requête
 	protected void parseGetParams(String params)
 	{
 		ArrayList<String> paramList = split(params, "&");
@@ -183,8 +181,10 @@ public class HttpRequestHeader extends HttpHeader
 	}
 	
 	/**
-	 * @param mimeType
-	 * @return
+	 * Indique si le client accepte le type MIME spécifié.  
+	 * 
+	 * @param mimeType type dont l'acceptation par le client est à vérifier
+	 * @return vrai si le client accepte le type MIME spécifié, faux sinon.
 	 */
 	public boolean accepts(String mimeType)
 	{
@@ -192,8 +192,10 @@ public class HttpRequestHeader extends HttpHeader
 	}
 
 	/**
-	 * @param param
-	 * @return
+	 * Retourne la valeur du paramètre GET (query) spécifié
+	 * 
+	 * @param param paramètre dont la valeur est demandée  
+	 * @return valeur du paramètre spécifié
 	 */
 	public String getParam(String param)
 	{
@@ -201,6 +203,8 @@ public class HttpRequestHeader extends HttpHeader
 	}
 	
 	/**
+	 * Retourne l'ensemble des noms des paramètres GET (query) de la requête
+	 * 
 	 * @return set of parameter keys
 	 */
 	public Set<String> getParamKeySet()
@@ -209,15 +213,19 @@ public class HttpRequestHeader extends HttpHeader
 	}
 	
 	/**
-	 * @return the method
+	 * Retourne la méthode utilisée pour la requête (GET, PUT, POST, HEAD, etc.)
+	 * 
+	 * @return méthode de la requête (GET, PUT, POST, HEAD, etc.) utilisée
 	 */
 	public String getMethod()
 	{
-		return method;
+		return this.method;
 	}
 
 	/**
-	 * @param method the method to set
+	 * Programme la méthode à utiliser pour la requête (GET, PUT, POST, HEAD, etc.).
+	 * 
+	 * @param method méthode de la requête (GET, PUT, POST, HEAD, etc.) à utiliser
 	 */
 	public void setMethod(String method)
 	{
@@ -225,7 +233,9 @@ public class HttpRequestHeader extends HttpHeader
 	}
 
 	/**
-	 * @return the fullPath
+	 * Retourne le chemin complet de la ressource (p. ex. /dossier/fichier.html?p1=oui&p2=bof)
+	 * 
+	 * @return chemin complet de la ressource 
 	 */
 	public String getFullPath()
 	{
@@ -233,7 +243,9 @@ public class HttpRequestHeader extends HttpHeader
 	}
 
 	/**
-	 * @param fullPath the fullPath to set
+	 * Programme le chemin complet de la ressource (p. ex. /dossier/fichier.html?p1=oui&p2=bof)
+	 * 
+	 * @param fullPath chemin complet de la ressource
 	 */
 	public void setFullPath(String fullPath)
 	{
@@ -241,11 +253,12 @@ public class HttpRequestHeader extends HttpHeader
 	}
 
 	/**
-	 * @return the path
+	 * Retourne le chemin de la ressource sans les paramètres (p. ex. /dossier/fichier.html)
+	 * 
+	 * @return chemin de la ressource sans les paramètres (p. ex. /dossier/fichier.html)
 	 */
 	public String getPath()
 	{
 		return path;
 	}
-
 }

@@ -3,6 +3,7 @@ package http.server;
 import static util.BasicString.join;
 import static util.BasicString.split;
 import static util.BasicString.stringToMap;
+import http.common.BadHeaderException;
 import http.common.HttpRequest;
 import http.common.HttpRequestHeader;
 import http.common.HttpResponse;
@@ -76,22 +77,22 @@ public class HttpServerThread implements Runnable
 		{
 			// Crée une requête d'entrée
 			this.request = new HttpRequest();
+			
 			// Attend de recevoir un header pour la requête
 			HttpRequestHeader requestHeader = this.request.getHeader();
 			requestHeader.receive(this.socket.getInputStream());
 			
-			// Tente de parser le header
-			boolean requestIsGood = requestHeader.parse();
-			
-			System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
-			System.out.print(requestHeader.getText());
-			
 			this.response = new HttpResponse();
 			HttpResponseHeader responseHeader = this.response.getHeader();
 
-			// Si la requête est bien formée
-			if (requestIsGood)
+			try
 			{
+				// Tente de parser le header
+				requestHeader.parse();
+				
+				System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
+				System.out.print(requestHeader.getText());
+			
 				// Envoie un évènement de requête reçue pour permettre d'effectuer un traitement différent
 				RequestEvent evt = new RequestEvent(this);
 				this.evtProcessor.requestEventReceived(evt);
@@ -126,13 +127,11 @@ public class HttpServerThread implements Runnable
 						if (!f.exists()) 
 						{
 							responseHeader.setStatusCode(404); // Not Found
-							responseHeader.setField("Content-Length", "0");
 						}
 						// Répertoire ? Permission lecture manquante ?
 						else if (f.isDirectory() || !f.canRead()) 
 						{
 							responseHeader.setStatusCode(403); // Forbidden
-							responseHeader.setField("Content-Length", "0");
 						}
 						else
 						{
@@ -167,28 +166,25 @@ public class HttpServerThread implements Runnable
 					else // POST, PUT, DELETE, TRACE, OPTIONS, CONNECT, PATCH
 					{
 						responseHeader.setStatusCode(501); // Not Implemented
-						responseHeader.setField("Content-Length", "0");
 					}
 				}
 			}
-			else
+			catch (BadHeaderException e)
 			{
 				responseHeader.setStatusCode(400); // Bad Request
-				responseHeader.setField("Content-Length", "0");
 			}
 			
-			// Si capable de créer le header
-			if (responseHeader.make())
+			// Si le socket est encore ouvert
+			if (!this.socket.isClosed())
 			{
-				System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
-				System.out.print(responseHeader.getText());
+				int statusCode = responseHeader.getStatusCode();
 
-				int statusCode = responseHeader.getStatusCode(); 
-				
+				// S'il s'agit d'un code d'erreur
 				if (statusCode >= 400)
 				{
 					File fError = new File(this.serverPath + "error_" + statusCode + ".htm");
 
+					// Si un fichier de réponse existe pour ce type d'erreur  
 					if (fError.exists())
 					{
 						this.response.setFileName(fError.getAbsolutePath());
@@ -196,41 +192,84 @@ public class HttpServerThread implements Runnable
 						responseHeader.setField("Content-Type", "text/html");
 						responseHeader.setField("Content-Length", fError.length() + "");
 					}
+					else if (responseHeader.getField("Content-Length") == null)
+					{
+						responseHeader.setField("Content-Length", "0");
+					}
 				}
-				
-				// Envoie la réponse
-				this.response.send(this.socket.getOutputStream());
+
+				try
+				{
+					System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
+					responseHeader.make();
+					
+					System.out.print(responseHeader.getText());
+
+					// Envoie la réponse
+					this.response.send(this.socket.getOutputStream());
+				}
+				catch (BadHeaderException e1)
+				{
+					try
+					{
+						responseHeader.setStatusCode(500); // Internal Server Error
+						
+						response.setContent(e1.getMessage().getBytes());
+						
+						responseHeader.make();
+						
+						System.out.print(responseHeader.getText());
+
+						// Envoie la réponse
+						this.response.send(this.socket.getOutputStream());
+					}
+					catch (BadHeaderException e2)
+					{
+						this.socket.getOutputStream().write(new String(
+								"HTTP/1.1 500 Internal Server Error\r\n" +
+								"Content-Length: 0\r\n\r\n").getBytes());
+					}
+				}
+				finally
+				{
+					this.socket.close();
+				}
 			}
-			this.socket.close();
 		}
 		catch (IOException e)
 		{
-			System.err.println("Error: " + e.getMessage());
+			System.err.println("Erreur d'E/S : " + e.getMessage());
 			e.printStackTrace();
 		}
 	}
 
 	/**
-	 * @return the request
+	 * Retourne l'objet request de cette instance du serveur.
+	 * 
+	 * @return objet request de cette instance du serveur
 	 */
 	public HttpRequest getRequest()
 	{
-		return request;
+		return this.request;
 	}
 
 	/**
-	 * @return the response
+	 * Retourne l'objet response de cette instance du serveur.
+	 * 
+	 * @return objet response de cette instance du serveur
 	 */
 	public HttpResponse getResponse()
 	{
-		return response;
+		return this.response;
 	}
 
 	/**
-	 * @return the socket
+	 * Retourne le socket associé à cette instance de serveur.
+	 * 
+	 * @return socket associé à cette instance de serveur
 	 */
 	public Socket getSocket()
 	{
-		return socket;
+		return this.socket;
 	}
 }
