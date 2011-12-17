@@ -1,5 +1,7 @@
 package http.common;
 
+import http.common.HttpResponse.TransferController;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -10,8 +12,18 @@ import java.nio.charset.Charset;
 
 public class HttpResponse
 {
-	private static final int KB_PER_SECOND = 50;
-
+	public class TransferController
+	{
+		public int maxRate;
+		public boolean stopped;
+		
+		public TransferController(int maxRate, boolean stopped)
+		{
+			this.maxRate = maxRate;
+			this.stopped = stopped;
+		}
+	}
+	
 	private HttpResponseHeader header;
 	private byte[] content;
 	private String fileName;
@@ -38,9 +50,10 @@ public class HttpResponse
 	 * Envoie la réponse HTTP sur la stream de sortie passée en paramètre. 
 	 * 
 	 * @param os OutputStream pour l'écriture de la réponse 
+	 * @param tc vitesse max. du téléversement en ko/s
 	 * @throws IOException
 	 */
-	public void send(OutputStream os) throws IOException, BadHeaderException
+	public void send(OutputStream os, TransferController tc) throws IOException, BadHeaderException
 	{
 		// Envoie le header
 		this.header.send(os);
@@ -57,17 +70,19 @@ public class HttpResponse
 				byte[] buf = new byte[1024];
 				int len;
 
-				while ((len = fis.read(buf)) > 0)
+				while ((len = fis.read(buf)) > 0 && !tc.stopped)
 				{
 					os.write(buf, 0, len);
-					try
+					
+					if (tc.maxRate > 0)
 					{
-						Thread.sleep(1000/KB_PER_SECOND);
-					}
-					catch (InterruptedException e)
-					{
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						try
+						{
+							Thread.sleep(1000 / tc.maxRate);
+						}
+						catch (InterruptedException e)
+						{
+						}
 					}
 				}
 
@@ -86,9 +101,11 @@ public class HttpResponse
 	 * Reçoit la partie contenu d'une réponse HTTP.
 	 * 
 	 * @param is InputStream pour la lecture du contenu de la réponse
+	 * @param tc vitesse max. du téléchargement en ko/s 
+	 * @return vrai si le téléchargement a été complété, faux sinon
 	 * @throws IOException
 	 */
-	public void receiveContent(InputStream is) throws IOException
+	public boolean receiveContent(InputStream is, TransferController tc) throws IOException
 	{
 		if (this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
 		{
@@ -101,24 +118,31 @@ public class HttpResponse
 			byte[] buf = new byte[1024];
 			int len;
 			
-			while ((len = is.read(buf)) > 0)
+			while ((len = is.read(buf)) > 0 && !tc.stopped)
 			{
 				fos.write(buf, 0, len);
-				
-				try
+
+				if (tc.maxRate > 0)
 				{
-					Thread.sleep(1000/KB_PER_SECOND);
-				}
-				catch (InterruptedException e)
-				{
-					e.printStackTrace();
+					try
+					{
+						Thread.sleep(1000 / tc.maxRate);
+					}
+					catch (InterruptedException e)
+					{
+					}
 				}
 			}
-
+			
 			fos.close();
 			
-			outputFile.renameTo(new File(this.fileName));
+			if (outputFile.length() == Integer.parseInt(this.header.getField("Content-Length")))
+			{
+				outputFile.renameTo(new File(this.fileName));
+				return true;
+			}
 		}
+		return false;
 	}
 	
 	/**
