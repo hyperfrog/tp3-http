@@ -8,6 +8,7 @@ import http.common.HttpRequest;
 import http.common.HttpRequestHeader;
 import http.common.HttpResponse;
 import http.common.HttpResponseHeader;
+import http.common.HttpResponse.TransferController;
 import http.server.event.RequestEvent;
 import http.server.event.RequestEventProcessor;
 
@@ -42,6 +43,9 @@ public class HttpServerThread implements Runnable
 	private RequestEventProcessor evtProcessor;
 	private HttpRequest request;
 	private HttpResponse response;
+	
+	// Objet servant à contrôler le téléchargement
+	private TransferController tc;
 	
 	private static final String FILE_SEP = System.getProperties().getProperty("file.separator");
 
@@ -84,6 +88,8 @@ public class HttpServerThread implements Runnable
 			
 			this.response = new HttpResponse();
 			HttpResponseHeader responseHeader = this.response.getHeader();
+
+			this.tc = this.response.new TransferController(0, false);
 
 			try
 			{
@@ -206,11 +212,11 @@ public class HttpServerThread implements Runnable
 					System.out.print(responseHeader.getText());
 
 					// Envoie la réponse
-					this.response.send(this.socket.getOutputStream());
+					this.response.send(this.socket.getOutputStream(), this.tc);
 				}
-				catch (BadHeaderException e1)
+				catch (BadHeaderException e1) // Pas capable de créer le header...
 				{
-					try
+					try // Essaie de faire un header avec le code 500 
 					{
 						responseHeader.setStatusCode(500); // Internal Server Error
 						
@@ -221,10 +227,11 @@ public class HttpServerThread implements Runnable
 						System.out.print(responseHeader.getText());
 
 						// Envoie la réponse
-						this.response.send(this.socket.getOutputStream());
+						this.response.send(this.socket.getOutputStream(), this.tc);
 					}
-					catch (BadHeaderException e2)
+					catch (BadHeaderException e2) // Pas capable..
 					{
+						// Écrit directement sur le socket.
 						this.socket.getOutputStream().write(new String(
 								"HTTP/1.1 500 Internal Server Error\r\n" +
 								"Content-Length: 0\r\n\r\n").getBytes());

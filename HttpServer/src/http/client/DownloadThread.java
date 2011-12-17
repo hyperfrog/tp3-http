@@ -9,6 +9,7 @@ import java.net.UnknownHostException;
 import http.common.BadHeaderException;
 import http.common.HttpRequest;
 import http.common.HttpResponse;
+import http.common.HttpResponse.TransferController;
 import http.common.HttpResponseHeader;
 
 /**
@@ -77,6 +78,9 @@ public class DownloadThread implements Runnable
 	private int fileSize;
 	// État du téléchargement
 	private DownloadState currentState;
+	
+	// Objet servant à contrôler le téléchargement
+	private TransferController tc;
 	
 	/**
 	 * Créer un nouveau thread pour télécharger le fichier situé à l'adresse URL
@@ -197,7 +201,6 @@ public class DownloadThread implements Runnable
 						else if (responseHeader.getStatusCode() == 500)
 						{
 							this.setCurrentState(DownloadState.ERROR);
-							retry = true;
 						}
 						else
 						{
@@ -222,14 +225,16 @@ public class DownloadThread implements Runnable
 							
 							this.setCurrentState(DownloadState.DOWNLOADING);
 							
+							this.tc = this.response.new TransferController(1000, false);
+							
 							// Effectue la sauvegarde
 							// TODO : Le début du fichier n'est pas sauvegardé
-							this.response.receiveContent(this.socket.getInputStream());
-							
-							this.setCurrentState(DownloadState.DONE);
+							if (this.response.receiveContent(this.socket.getInputStream(), this.tc))
+							{
+								this.setCurrentState(DownloadState.DONE);
+								retry = false;
+							}
 						}
-						
-						retry = false;
 					}
 					catch (BadHeaderException e)
 					{
@@ -316,11 +321,11 @@ public class DownloadThread implements Runnable
 		{
 			this.currentState = newState;
 			
-//			if (newState.equals(DownloadState.STOPPED))
-//			{
-//				this.closeConnection();
-//			}
-			
+			if (newState.equals(DownloadState.STOPPED))
+			{
+				this.tc.stopped = true;
+			}
+
 			this.appDownload.update(this);
 		}
 	}
