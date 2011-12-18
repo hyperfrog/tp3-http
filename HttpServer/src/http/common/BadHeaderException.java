@@ -1,49 +1,31 @@
 /**
- * 
+ * Une exception de type BadHeaderExcetption est générée quand une entête HTTP ne peut pas être créée ou analysée. 
  */
 package http.common;
 
 /**
- * @author Christian
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
  *
  */
 public class BadHeaderException extends Exception
 {
 
 	/**
-	 * 
+	 * Crée une exception de type BadHeaderException.
 	 */
 	public BadHeaderException()
 	{
-		// TODO Auto-generated constructor stub
+		super();
 	}
 
 	/**
-	 * @param arg0
+	 * Crée une exception de type BadHeaderException avec un message associé.
+	 * 
+	 * @param msg message associée à l'exception créée
 	 */
-	public BadHeaderException(String arg0)
+	public BadHeaderException(String msg)
 	{
-		super(arg0);
-		// TODO Auto-generated constructor stub
+		super(msg);
 	}
-
-	/**
-	 * @param arg0
-	 */
-	public BadHeaderException(Throwable arg0)
-	{
-		super(arg0);
-		// TODO Auto-generated constructor stub
-	}
-
-	/**
-	 * @param arg0
-	 * @param arg1
-	 */
-	public BadHeaderException(String arg0, Throwable arg1)
-	{
-		super(arg0, arg1);
-		// TODO Auto-generated constructor stub
-	}
-
 }

@@ -1,7 +1,6 @@
 package http.common;
 
-import http.common.HttpResponse.TransferController;
-
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -10,13 +9,40 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
+/**
+ * La classe HttpResponse modélise une réponse HTTP. 
+ * 
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
+ *
+ */
 public class HttpResponse
 {
+	/**
+	 * Un TransferController est une structure contenant les propriétés d'un transfert
+	 * 
+	 * @author Christian Lesage
+	 * @author Alexandre Tremblay
+	 *
+	 */
 	public class TransferController
 	{
+		/**
+		 * Débit max. du transfert en ko/s
+		 */
 		public int maxRate;
+		
+		/**
+		 * Indique si le transfert doit s'arrêter
+		 */
 		public boolean stopped;
 		
+		/**
+		 * Construit un TransferController
+		 * 
+		 * @param maxRate Débit max. du transfert en ko/s
+		 * @param stopped Indique si le transfert doit s'arrêter (mettre à false à la création)
+		 */
 		public TransferController(int maxRate, boolean stopped)
 		{
 			this.maxRate = maxRate;
@@ -24,10 +50,19 @@ public class HttpResponse
 		}
 	}
 	
+	// Entête de la réponse
 	private HttpResponseHeader header;
+	
+	// Contenu associé à la réponse
 	private byte[] content;
+	
+	// Chemin du fichier à envoyer ou recevoir
 	private String fileName;
+	
+	// Indique si la réponse peut être mise en cache par le client ou les proxys
 	private boolean isCacheable;
+	
+	// Indique si le contenu doit être envoyé
 	private boolean isContentSendable;
 	
 	/**
@@ -50,7 +85,7 @@ public class HttpResponse
 	 * Envoie la réponse HTTP sur la stream de sortie passée en paramètre. 
 	 * 
 	 * @param os OutputStream pour l'écriture de la réponse 
-	 * @param tc vitesse max. du téléversement en ko/s
+	 * @param tc débit max. du téléversement en ko/s
 	 * @throws IOException
 	 */
 	public void send(OutputStream os, TransferController tc) throws IOException, BadHeaderException
@@ -58,42 +93,17 @@ public class HttpResponse
 		// Envoie le header
 		this.header.send(os);
 		
+		// Envoie le contenu s'il y en a un et s'il doit être envoyé 
 		if (this.isContentSendable 
 				&& this.header.getField("Content-Length") != null 
 				&& !this.header.getField("Content-Length").equals("0"))
 		{
-			if (this.content == null )
-			{
-				// Open the file   
-				FileInputStream fis = new FileInputStream(new File(this.fileName));
+			InputStream is = (this.content == null) ? new FileInputStream(new File(this.fileName)) : new ByteArrayInputStream(this.content);
+			
+			this.doCopy(is, os, tc);
 
-				byte[] buf = new byte[1024];
-				int len;
-
-				while ((len = fis.read(buf)) > 0 && !tc.stopped)
-				{
-					os.write(buf, 0, len);
-					
-					if (tc.maxRate > 0)
-					{
-						try
-						{
-							Thread.sleep(1000 / tc.maxRate);
-						}
-						catch (InterruptedException e)
-						{
-						}
-					}
-				}
-
-				fis.close();
-				os.flush();
-			}
-			else
-			{
-				os.write(this.content);
-				os.flush();
-			}
+			is.close();
+			os.flush();
 		}
 	}
 	
@@ -101,7 +111,7 @@ public class HttpResponse
 	 * Reçoit la partie contenu d'une réponse HTTP.
 	 * 
 	 * @param is InputStream pour la lecture du contenu de la réponse
-	 * @param tc vitesse max. du téléchargement en ko/s 
+	 * @param tc débit max. du téléchargement en ko/s 
 	 * @return vrai si le téléchargement a été complété, faux sinon
 	 * @throws IOException
 	 */
@@ -109,44 +119,68 @@ public class HttpResponse
 	{
 		if (this.header.getField("Content-Length") != null && !this.header.getField("Content-Length").equals("0"))
 		{
-			File tempName = new File(this.fileName);
+			long length = 0;
 			
-			File outputFile = File.createTempFile(tempName.getName(), ".tmp");
-			
-			FileOutputStream fos = new FileOutputStream(outputFile);
-			
-			byte[] buf = new byte[1024];
-			int len;
-			
-			while ((len = is.read(buf)) > 0 && !tc.stopped)
+			try
 			{
-				fos.write(buf, 0, len);
-
-				if (tc.maxRate > 0)
+				length = Long.parseLong(this.header.getField("Content-Length"));
+				
+				File tempName = new File(this.fileName);
+				
+				File outputFile = File.createTempFile(tempName.getName(), ".tmp");
+				
+				OutputStream os = new FileOutputStream(outputFile);
+				
+				this.doCopy(is, os, tc);
+				
+				os.close();
+				
+				if (outputFile.length() == length)
 				{
-					try
-					{
-						Thread.sleep(1000 / tc.maxRate);
-					}
-					catch (InterruptedException e)
-					{
-					}
+					outputFile.renameTo(new File(this.fileName));
+					return true;
 				}
 			}
-			
-			fos.close();
-			
-			if (outputFile.length() == Integer.parseInt(this.header.getField("Content-Length")))
+			catch (NumberFormatException e)
 			{
-				outputFile.renameTo(new File(this.fileName));
-				return true;
 			}
 		}
+		
 		return false;
 	}
 	
+	// Effectue la copie d'une stream d'entrée vers une stream de sortie
+	private void doCopy(InputStream is, OutputStream os, TransferController tc) throws IOException
+	{
+		// Transfère 1 ko à la fois
+		byte[] buf = new byte[1024];
+		int len;
+		
+		// Continue à copier tant qu'il y a quelque chose à lire et que le transfert doit se poursuivre
+		for (long startTime = System.currentTimeMillis(); (len = is.read(buf)) > 0 && !tc.stopped; startTime = System.currentTimeMillis())
+		{
+			os.write(buf, 0, len);
+
+			if (tc.maxRate > 0)
+			{
+				try
+				{
+					// Attend le temps nécessaire pour ne pas dépasser le débit max.
+					long delay = (1000 - (System.currentTimeMillis() - startTime)) / tc.maxRate;
+
+					Thread.sleep(delay > 0 ? delay : 0);
+				}
+				catch (InterruptedException e)
+				{
+				}
+			}
+		}
+	}
+	
 	/**
-	 * @return
+	 * Retourne l'entête de la réponse.
+	 * 
+	 * @return l'entête de la réponse
 	 */
 	public HttpResponseHeader getHeader()
 	{
@@ -154,7 +188,9 @@ public class HttpResponse
 	}
 	
 	/**
-	 * @return the content
+	 * Retourne le contenu associé à cette réponse.
+	 * 
+	 * @return le contenu associé à cette réponse
 	 */
 	public byte[] getContent()
 	{
@@ -162,7 +198,9 @@ public class HttpResponse
 	}
 
 	/**
-	 * @param content the content to set
+	 * Programme le contenu associé à la réponse.
+	 * 
+	 * @param content contenu à associer à la réponse
 	 */
 	public void setContent(byte[] content)
 	{
@@ -174,7 +212,10 @@ public class HttpResponse
 	}
 
 	/**
-	 * @param content the content to set
+	 * Programme le contenu associé à la réponse.
+	 * 
+	 * @param content contenu à associer à la réponse
+	 * @param cs encodage des caractères  
 	 */
 	public void setContent(String content, Charset cs)
 	{
@@ -185,7 +226,9 @@ public class HttpResponse
 	}
 
 	/**
-	 * @return the fileName
+	 * Retourne le chemin le du fichier à envoyer ou recevoir
+	 * 
+	 * @return chemin le du fichier à envoyer ou recevoir
 	 */
 	public String getFileName()
 	{
@@ -193,7 +236,9 @@ public class HttpResponse
 	}
 
 	/**
-	 * @param fileName the fileName to set
+	 * Programme le chemin le du fichier à envoyer ou recevoir
+	 * 
+	 * @param fileName chemin le du fichier à envoyer ou recevoir
 	 */
 	public void setFileName(String fileName)
 	{
@@ -201,24 +246,9 @@ public class HttpResponse
 	}
 
 	/**
-	 * @return the cacheable
-	 */
-	public boolean isCacheable()
-	{
-		return isCacheable;
-	}
-
-	/**
-	 * @param isCacheable the cacheable to set
-	 */
-	public void setCacheable(boolean isCacheable)
-	{
-		this.header.setCacheable(isCacheable);
-		this.isCacheable = isCacheable;
-	}
-
-	/**
-	 * @return the sendContent
+	 * Indique si la partie contenu doit être envoyée avec la réponse. 
+	 * 
+	 * @return vrai si le contenu doit être envoyé, faux sion 
 	 */
 	public boolean isContentSendable()
 	{
@@ -226,7 +256,9 @@ public class HttpResponse
 	}
 
 	/**
-	 * @param isContentSendable the sendContent to set
+	 *  Détermine si la partie contenu doit être envoyée avec la réponse.
+	 * 
+	 * @param isContentSendable vrai pour que le contenu soit envoyé avec la réponse, faux pour qu'il ne le soit pas
 	 */
 	public void setContentSendable(boolean isContentSendable)
 	{

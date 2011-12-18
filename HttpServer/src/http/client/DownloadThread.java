@@ -13,8 +13,8 @@ import http.common.HttpResponse.TransferController;
 import http.common.HttpResponseHeader;
 
 /**
- * La classe DownloadThread créer un nouveau thread qui sert à télécharger un fichier
- * et le sauvegarder sur l'ordinateur.
+ * La classe DownloadThread crée un nouveau thread qui sert à télécharger un fichier
+ * et à le sauvegarder sur l'ordinateur.
  * 
  * @author Christian Lesage
  * @author Alexandre Tremblay
@@ -79,7 +79,7 @@ public class DownloadThread implements Runnable
 	// État du téléchargement
 	private DownloadState currentState;
 	
-	// Objet servant à contrôler le téléchargement
+	// Propriétés du transfert
 	private TransferController tc;
 	
 	/**
@@ -165,7 +165,7 @@ public class DownloadThread implements Runnable
 				
 				try
 				{
-					// Envoi la requête
+					// Envoie la requête
 					this.request.send(this.socket.getOutputStream());
 
 					// Attend de recevoir un header pour la réponse
@@ -236,16 +236,18 @@ public class DownloadThread implements Runnable
 							}
 						}
 					}
-					catch (BadHeaderException e)
+					catch (BadHeaderException e) // Incapable d'analyser le header de réponse 
 					{
 						System.err.println("He's a bad, bad server. No cookies for him today.");
 					}
 					
 				}
-				catch (BadHeaderException e)
+				catch (BadHeaderException e) // Tentative infructueuse de création d'un header pour la requête
 				{
 					System.err.println("I'm a bad, bad client. No cookies for me today.");
 					this.setCurrentState(DownloadState.ERROR);
+					
+					// Ça ne donne rien de réessayer; on obtiendrait le même résultat
 					retry = false;
 				}
 				
@@ -366,7 +368,7 @@ public class DownloadThread implements Runnable
 		
 		if (bytes < unit)
 		{
-			return bytes + " B";
+			return bytes + " o";
 		}
 		
 		int exp = (int) (Math.log(bytes) / Math.log(unit));

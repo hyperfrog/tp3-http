@@ -1,6 +1,3 @@
-/**
- * 
- */
 package http.common;
 
 import static util.BasicString.split;
@@ -27,6 +24,7 @@ public class HttpResponseHeader extends HttpHeader
 	// Description du code de la réponse
 	private String statusCodeDesc;
 	
+	// Indique si la réponse peut être mise en cache par le client ou les proxys
 	private boolean isCacheable;
 	
 	/**
@@ -141,7 +139,9 @@ public class HttpResponseHeader extends HttpHeader
 	}
 
 	/**
-	 * @return the isCacheable
+	 * Indique si la réponse peut être mise en cache par le client ou les proxys
+	 * 
+	 * @return vrai si la réponse peut être mise en cache, faux sinon
 	 */
 	public boolean isCacheable()
 	{
