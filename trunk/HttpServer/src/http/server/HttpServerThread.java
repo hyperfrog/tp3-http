@@ -25,7 +25,10 @@ import java.util.regex.Pattern;
 import util.DateUtil;
 
 /**
- * @author Christian
+ * Cette classe modélise un serveur HTTP s'exécutant dans un thread.
+ * 
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
  *
  */
 public class HttpServerThread implements Runnable
@@ -39,22 +42,32 @@ public class HttpServerThread implements Runnable
 	// Chemin relatif du dossier où se trouvent les fichiers du site Web à servir
 	private String siteFolder;
 	
+	// Dictionnaire des extensions et des types MIME correspondants
 	private Map<String, String> mimeTypes;
+	
+	// Objet traitant les évènements de requête reçue
 	private RequestEventProcessor evtProcessor;
+	
+	// Requête d'entrée
 	private HttpRequest request;
+	
+	// Réponse de sortie
 	private HttpResponse response;
 	
 	// Objet servant à contrôler le téléchargement
 	private TransferController tc;
 	
+	// Séparateur de noms de dossier propre à la plateforme
 	private static final String FILE_SEP = System.getProperties().getProperty("file.separator");
 
 	/**
-	 * @param client
-	 * @param serverPath
-	 * @param siteFolder
-	 * @param mimeTypes
-	 * @param ep
+	 * Construit une instance de serveur HTTP s'exécutant dans un thread.  
+	 * 
+	 * @param client socket ouvert pour la communication avec le client
+	 * @param serverPath chemin absolu du dossier où se trouvent les fichiers nécessaires au serveur
+	 * @param siteFolder chemin relatif du dossier où se trouvent les fichiers du site Web à servir
+	 * @param mimeTypes dictionnaire des extensions et des types MIME correspondants 
+	 * @param ep objet traitant les évènements de requête reçue
 	 */
 	public HttpServerThread(Socket client, String serverPath, String siteFolder, Map<String, String> mimeTypes, RequestEventProcessor ep)
 	{
@@ -115,11 +128,11 @@ public class HttpServerThread implements Runnable
 						}
 						
 						// La réponse sera «cachable» puisqu'on s'apprête à servir un fichier du système de fichiers 
-						this.response.setCacheable(true);
+						responseHeader.setCacheable(true);
 						
 						String filePath = this.serverPath + this.siteFolder + requestHeader.getPath();
 						
-						// Remplace les / par des \ au besoin
+						// Remplace les / par autre chose au besoin
 						if (FILE_SEP != "/")
 						{
 							filePath = join(split(filePath, "/"), FILE_SEP);

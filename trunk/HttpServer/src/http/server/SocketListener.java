@@ -192,7 +192,7 @@ public class SocketListener implements RequestEventProcessor, Runnable
 			evt.cancel = true;
 
 			response.getHeader().setStatusCode(200);
-			response.setCacheable(false);
+			response.getHeader().setCacheable(false);
 
 			String content = new String();
 			
