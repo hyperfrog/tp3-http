@@ -169,6 +169,7 @@ public class AppDownload
 				&& !this.downloadsList.get(pos).isDone()
 				&& this.threadsList.get(pos) != null)
 		{
+			this.downloadsList.get(pos).setCurrentState(DownloadState.STOPPED);
 			this.threadsList.set(pos, null);
 			
 			this.nbCurrentDownloads = Math.max(0, this.nbCurrentDownloads - 1);
