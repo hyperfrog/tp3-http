@@ -78,7 +78,7 @@ public class AppDownload
 	{
 		if (this.downloadsList.size() > 0 && (pos >= 0 && pos < this.downloadsList.size()))
 		{
-			this.stopDownload(pos);
+			this.stopDownload(pos, true);
 			
 			this.downloadsList.remove(pos);
 			this.threadsList.remove(pos);
@@ -163,13 +163,17 @@ public class AppDownload
 	 * 
 	 * @param pos la position du téléchargement à arrêter
 	 */
-	public void stopDownload(int pos)
+	public void stopDownload(int pos, boolean fromList)
 	{
 		if ((pos >= 0 && pos < this.downloadsList.size()) 
-				&& !this.downloadsList.get(pos).isDone()
+				&& (!this.downloadsList.get(pos).isDone() || !fromList)
 				&& this.threadsList.get(pos) != null)
 		{
-			this.downloadsList.get(pos).setCurrentState(DownloadState.STOPPED);
+			if (fromList)
+			{
+				this.downloadsList.get(pos).setCurrentState(DownloadState.STOPPED);
+			}
+			
 			this.threadsList.set(pos, null);
 			
 			this.nbCurrentDownloads = Math.max(0, this.nbCurrentDownloads - 1);
@@ -198,7 +202,7 @@ public class AppDownload
 		if (dt.isDone())
 		{
 			// Arrête le thread du téléchargement
-			this.stopDownload(this.downloadsList.indexOf(dt));
+			this.stopDownload(this.downloadsList.indexOf(dt), false);
 			
 			// Démarre le prochain téléchargement en attente
 			if (this.nbCurrentDownloads < AppDownload.MAX_DOWNLOADS)

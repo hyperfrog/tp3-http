@@ -181,7 +181,7 @@ public class AppFrame extends JFrame implements ActionListener, ComponentListene
 		{
 			if (this.downloadsTable.getSelectedRow() != -1)
 			{
-				this.appDownload.stopDownload(this.downloadsTable.getSelectedRow());
+				this.appDownload.stopDownload(this.downloadsTable.getSelectedRow(), true);
 			}
 		}
 		

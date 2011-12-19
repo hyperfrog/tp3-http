@@ -99,7 +99,6 @@ public class HttpResponse
 				length = Long.parseLong(this.header.getField("Content-Length"));
 				
 				File outputFile = new File(this.fileName + ".tmp");
-				//File outputFile = File.createTempFile(tempName.getName(), ".tmp");
 				
 				OutputStream os = new FileOutputStream(outputFile);
 				

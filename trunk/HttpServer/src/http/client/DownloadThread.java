@@ -25,10 +25,12 @@ public class DownloadThread implements Runnable
 	// Tous les états possible du téléchargement
 	public static enum DownloadState
 	{
+		NEW ("Arrêté"),
 		DOWNLOADING ("Téléchargement en cours..."), 
 		DONE ("Terminé"), 
 		RETRYING (String.format("Renvoi de la requête dans %d secondes", RETRY_WAIT_TIME / 1000)), 
-		WAITING ("En attente..."), 
+		WAITING ("En attente..."),
+		WAITING_SERVER ("En attente du serveur..."), 
 		ERROR ("Erreur"), 
 		NOT_FOUND ("Page introuvable"), 
 		FORBIDDEN ("Accès interdit"),
@@ -96,7 +98,7 @@ public class DownloadThread implements Runnable
 		this.savePath = savePath;
 		
 		this.urlName = path.toExternalForm();
-		this.currentState = DownloadState.STOPPED;
+		this.currentState = DownloadState.NEW;
 		
 		this.fileName = path.getPath().substring(path.getPath().lastIndexOf(File.separator) + 1, path.getPath().lastIndexOf("."));
 		this.extName = path.getPath().substring(path.getPath().lastIndexOf(".") + 1, path.getPath().length());
@@ -152,7 +154,7 @@ public class DownloadThread implements Runnable
 	public void run()
 	{
 		// Limite le transfert à 100 Ko/s
-		this.tc = new TransferController(100);
+		this.tc = new TransferController(10);
 		
 		try
 		{
@@ -164,7 +166,7 @@ public class DownloadThread implements Runnable
 				
 				try
 				{
-					this.setCurrentState(DownloadState.WAITING);
+					this.setCurrentState(DownloadState.WAITING_SERVER);
 					
 					// Envoie la requête
 					this.request.send(this.socket.getOutputStream());
@@ -210,7 +212,7 @@ public class DownloadThread implements Runnable
 							String checkPath = this.savePath + this.fileName + "." + this.extName;
 							
 							// On renomme le fichier en ajoutant «(i)» à la fin du nom du fichier
-							if (new File(checkPath).exists())
+							if (new File(checkPath).exists() || new File(checkPath + ".tmp").exists())
 							{
 								int i = 1;
 								do
@@ -232,9 +234,13 @@ public class DownloadThread implements Runnable
 							if (this.response.receiveContent(this.socket.getInputStream(), this.tc))
 							{
 								this.setCurrentState(DownloadState.DONE);
+								retry = false;
 							}
-							
-							retry = false;
+							else
+							{
+								this.setCurrentState(DownloadState.ERROR);
+								new File(checkPath + ".tmp").delete();
+							}
 						}
 					}
 					catch (BadHeaderException e) // Incapable d'analyser le header de réponse 
