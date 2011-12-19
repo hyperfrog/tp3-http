@@ -2,6 +2,7 @@ package http.client;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -54,6 +55,8 @@ public class DownloadThread implements Runnable
 	private static final String USER_AGENT = "HttpClient Downloader";
 	// Interval entre les essais si il y a échec lors du téléchargement
 	private static final long RETRY_WAIT_TIME = 5000;
+	// Nombre maximal d'essais
+	private static final int RETRY_ATTEMPT = 3;
 	
 	// L'objet AppDownload contenant la liste des téléchargement
 	private AppDownload appDownload;
@@ -65,6 +68,8 @@ public class DownloadThread implements Runnable
 	private HttpResponse response;
 	// Adresse URL du fichier à télécharger
 	private URL path;
+	// Nombre d'essais fait par le thread
+	private int connectionAttempt;
 	
 	// Destination de sauvegarde
 	private String savePath;
@@ -99,6 +104,7 @@ public class DownloadThread implements Runnable
 		
 		this.urlName = path.toExternalForm();
 		this.currentState = DownloadState.NEW;
+		this.connectionAttempt = 0;
 		
 		this.fileName = path.getPath().substring(path.getPath().lastIndexOf(File.separator) + 1, path.getPath().lastIndexOf("."));
 		this.extName = path.getPath().substring(path.getPath().lastIndexOf(".") + 1, path.getPath().length());
@@ -121,7 +127,7 @@ public class DownloadThread implements Runnable
 	}
 	
 	// Tente d'ouvrir une connection avec le serveur demandé
-	private void openConnection()
+	private boolean openConnection()
 	{
 		boolean hasFailed = false;
 		
@@ -135,6 +141,11 @@ public class DownloadThread implements Runnable
 			hasFailed = true;
 			e.printStackTrace();
 		}
+		catch (ConnectException e)
+		{
+		    hasFailed = true;
+		    e.printStackTrace();
+		} 
 		catch (IOException e)
 		{
 			hasFailed = true;
@@ -145,6 +156,8 @@ public class DownloadThread implements Runnable
 		{
 			this.setCurrentState(DownloadState.ERROR);
 		}
+		
+		return !hasFailed;
 	}
 	
 	@Override
@@ -156,122 +169,130 @@ public class DownloadThread implements Runnable
 		// Limite le transfert à 100 Ko/s
 		this.tc = new TransferController(100);
 		
+		boolean retry = true;
+		
 		try
 		{
-			boolean retry = true;
-			
 			do
 			{
-				this.openConnection();
+				this.setCurrentState(DownloadState.WAITING_SERVER);
 				
-				try
+				if (this.openConnection())
 				{
-					this.setCurrentState(DownloadState.WAITING_SERVER);
-					
-					// Envoie la requête
-					this.request.send(this.socket.getOutputStream());
-
-					// Attend de recevoir un header pour la réponse
-					this.response = new HttpResponse();
-					HttpResponseHeader responseHeader = this.response.getHeader();
-					responseHeader.receive(this.socket.getInputStream());
-					
 					try
-					{
-						// Tente de parser le header
-						responseHeader.parse();
+					{						
+						// Envoie la requête
+						this.request.send(this.socket.getOutputStream());
+	
+						// Attend de recevoir un header pour la réponse
+						this.response = new HttpResponse();
+						HttpResponseHeader responseHeader = this.response.getHeader();
+						responseHeader.receive(this.socket.getInputStream());
 						
-						// Si on reçoit un code 404, la page n'existe pas
-						if (responseHeader.getStatusCode() == 404)
+						try
 						{
-							this.setCurrentState(DownloadState.NOT_FOUND);
-							retry = false;
-						}
-						// Si on reçoit un code 403, c'est peut-être un répertoire ou l'accès est interdit
-						else if (responseHeader.getStatusCode() == 403)
-						{
-							this.setCurrentState(DownloadState.FORBIDDEN);
-							retry = false;
-						}
-						// Si on reçoit un code 501, on demande un protocol non implémenté
-						else if (responseHeader.getStatusCode() == 501)
-						{
-							this.setCurrentState(DownloadState.ERROR);
-							retry = false;
-						}
-						// Si on reçoit un code 500, le serveur est dans les patates, 
-						// alors on essaie de nouveau plus tard
-						else if (responseHeader.getStatusCode() == 500)
-						{
-							this.setCurrentState(DownloadState.ERROR);
-						}
-						else
-						{
-							this.fileSize = Integer.parseInt(responseHeader.getField("Content-Length"));
+							// Tente de parser le header
+							responseHeader.parse();
 							
-							String checkPath = this.savePath + this.fileName + "." + this.extName;
-							
-							// On renomme le fichier en ajoutant «(i)» à la fin du nom du fichier
-							if (new File(checkPath).exists() || new File(checkPath + ".tmp").exists())
+							// Si on reçoit un code 404, la page n'existe pas
+							if (responseHeader.getStatusCode() == 404)
 							{
-								int i = 1;
-								do
-								{
-									checkPath = this.savePath + this.fileName + " (" + i + ")." + this.extName;
-									i++;
-								}
-								while (new File(checkPath).exists() || new File(checkPath + ".tmp").exists());
-							}
-							
-							File f = new File(checkPath);
-							
-							// Indique le chemin du fichier à utiliser pour sauvegarder
-							this.response.setFileName(f.getAbsolutePath());
-							
-							this.setCurrentState(DownloadState.DOWNLOADING);
-							
-							// Effectue la sauvegarde
-							if (this.response.receiveContent(this.socket.getInputStream(), this.tc))
-							{
-								this.setCurrentState(DownloadState.DONE);
+								this.setCurrentState(DownloadState.NOT_FOUND);
 								retry = false;
+							}
+							// Si on reçoit un code 403, c'est peut-être un répertoire ou l'accès est interdit
+							else if (responseHeader.getStatusCode() == 403)
+							{
+								this.setCurrentState(DownloadState.FORBIDDEN);
+								retry = false;
+							}
+							// Si on reçoit un code 501, on demande un protocol non implémenté
+							else if (responseHeader.getStatusCode() == 501)
+							{
+								this.setCurrentState(DownloadState.ERROR);
+								retry = false;
+							}
+							// Si on reçoit un code 500, le serveur est dans les patates, 
+							// alors on essaie de nouveau plus tard
+							else if (responseHeader.getStatusCode() == 500)
+							{
+								this.setCurrentState(DownloadState.ERROR);
 							}
 							else
 							{
-								this.setCurrentState(DownloadState.ERROR);
-								new File(checkPath + ".tmp").delete();
+								this.fileSize = Integer.parseInt(responseHeader.getField("Content-Length"));
+								
+								String checkPath = this.savePath + this.fileName + "." + this.extName;
+								
+								// On renomme le fichier en ajoutant «(i)» à la fin du nom du fichier
+								if (new File(checkPath).exists() || new File(checkPath + ".tmp").exists())
+								{
+									int i = 1;
+									do
+									{
+										checkPath = this.savePath + this.fileName + " (" + i + ")." + this.extName;
+										i++;
+									}
+									while (new File(checkPath).exists() || new File(checkPath + ".tmp").exists());
+								}
+								
+								File f = new File(checkPath);
+								
+								// Indique le chemin du fichier à utiliser pour sauvegarder
+								this.response.setFileName(f.getAbsolutePath());
+								
+								this.setCurrentState(DownloadState.DOWNLOADING);
+								
+								// Effectue la sauvegarde
+								if (this.response.receiveContent(this.socket.getInputStream(), this.tc))
+								{
+									this.setCurrentState(DownloadState.DONE);
+									retry = false;
+								}
+								else
+								{
+									this.setCurrentState(DownloadState.ERROR);
+									new File(checkPath + ".tmp").delete();
+								}
 							}
 						}
+						catch (BadHeaderException e) // Incapable d'analyser le header de réponse 
+						{
+							System.err.println("He's a bad, bad server. No cookies for him today.");
+						}
+						
 					}
-					catch (BadHeaderException e) // Incapable d'analyser le header de réponse 
+					catch (BadHeaderException e) // Tentative infructueuse de création d'un header pour la requête
 					{
-						System.err.println("He's a bad, bad server. No cookies for him today.");
+						System.err.println("I'm a bad, bad client. No cookies for me today.");
+						this.setCurrentState(DownloadState.ERROR);
+						
+						// Ça ne donne rien de réessayer; on obtiendrait le même résultat
+						retry = false;
 					}
 					
+					this.closeConnection();
 				}
-				catch (BadHeaderException e) // Tentative infructueuse de création d'un header pour la requête
-				{
-					System.err.println("I'm a bad, bad client. No cookies for me today.");
-					this.setCurrentState(DownloadState.ERROR);
-					
-					// Ça ne donne rien de réessayer; on obtiendrait le même résultat
-					retry = false;
-				}
-				
-				this.closeConnection();
 
 				// Si il y a eu une erreur lors de l'envoi de la requête on réessait d'envoyer la requête
 				if (retry)
 				{
+					this.connectionAttempt++;
+					
 					this.setCurrentState(DownloadState.RETRYING);
 					this.sleepFor(DownloadThread.RETRY_WAIT_TIME);
 				}
 			}
-			while (retry);
+			while (retry && this.connectionAttempt < RETRY_ATTEMPT);
 		}
 		catch (IOException e)
 		{
 			e.printStackTrace();
+		}
+		
+		if (retry)
+		{
+			this.setCurrentState(DownloadState.ERROR);
 		}
 	}
 	
