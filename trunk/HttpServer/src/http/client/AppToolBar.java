@@ -31,12 +31,12 @@ public class AppToolBar extends JToolBar
     {
     	try
     	{
-    		AppToolBar.addImage = ImageIO.read(AppToolBar.class.getResource("./res/add.png"));
-    		AppToolBar.removeImage = ImageIO.read(AppToolBar.class.getResource("./res/remove.png"));
-    		AppToolBar.moveUpImage = ImageIO.read(AppToolBar.class.getResource("./res/move_up.png"));
-    		AppToolBar.moveDownImage = ImageIO.read(AppToolBar.class.getResource("./res/move_down.png"));
-    		AppToolBar.startImage = ImageIO.read(AppToolBar.class.getResource("./res/start.png"));
-    		AppToolBar.stopImage = ImageIO.read(AppToolBar.class.getResource("./res/stop.png"));
+    		AppToolBar.addImage = ImageIO.read(AppToolBar.class.getResource("res/add.png"));
+    		AppToolBar.removeImage = ImageIO.read(AppToolBar.class.getResource("res/remove.png"));
+    		AppToolBar.moveUpImage = ImageIO.read(AppToolBar.class.getResource("res/move_up.png"));
+    		AppToolBar.moveDownImage = ImageIO.read(AppToolBar.class.getResource("res/move_down.png"));
+    		AppToolBar.startImage = ImageIO.read(AppToolBar.class.getResource("res/start.png"));
+    		AppToolBar.stopImage = ImageIO.read(AppToolBar.class.getResource("res/stop.png"));
     	}
     	catch (IOException e)
     	{
