@@ -3,12 +3,12 @@
  */
 package http.common;
 
-import static util.BasicString.bytesToString;
-import static util.BasicString.isAscii;
-import static util.BasicString.isValidUtf8;
-import static util.BasicString.split;
-import static util.BasicString.join;
-import static util.BasicString.unescape;
+import static util.StringUtil.bytesToString;
+import static util.StringUtil.isAscii;
+import static util.StringUtil.isValidUtf8;
+import static util.StringUtil.split;
+import static util.StringUtil.join;
+import static util.StringUtil.unescape;
 
 import java.util.ArrayList;
 import java.util.HashMap;

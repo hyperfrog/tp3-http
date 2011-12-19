@@ -1,6 +1,6 @@
 package http.server;
 
-import static util.BasicString.stringToMap;
+import static util.StringUtil.stringToMap;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -55,11 +55,14 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 	// Dictionnaire des extensions et des types MIME correspondants
 	private static Map<String, String> mimeTypes = null;
 	
-	private volatile Thread runThread;
+	// Liste des serveurs actifs
+	private List<HttpServerThread> serverThreads = new ArrayList<HttpServerThread>();
 	
-	private List<Thread> serverThreads = new ArrayList<Thread>();
-	
+	// Compteur de transactions
 	private int transactionId = 1; 
+	
+	// Indique si le thread du répartiteur doit s'arrêter
+	private volatile Thread runThread;
 	
 	/**
 	 * Construit un répartiteur de requêtes.
@@ -146,26 +149,23 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 						// Attend un peu
 						try { Thread.sleep(100); } catch (InterruptedException unused) {}
 
-						// Enlève les serveurs «morts» de la liste
-						Iterator<Thread> iter = this.serverThreads.iterator();
+						// Enlève les serveurs inactifs de la liste
+						Iterator<HttpServerThread> iter = this.serverThreads.iterator();
 						
 						while (iter.hasNext())
 						{
-						    if (!iter.next().isAlive())
-						    {
-						    	iter.remove();
-						    }
+						    if (iter.next().isDone()) { iter.remove(); }
 						}
 					}
 
-					// Crée un serveur 
+					// Crée un nouveau serveur 
 					HttpServerThread server = new HttpServerThread(clientSocket, serverPath, siteFolder, Dispatcher.mimeTypes, this);
+					this.serverThreads.add(server);
 					
 					// Crée le thread du serveur en mode daemon pour éviter qu'il reste vivant après une demande d'arrêt du répartiteur
 					Thread t = new Thread(server);
 					t.setDaemon(true);
 					t.setName("" + this.transactionId++);
-					this.serverThreads.add(t);
 					t.start();
 				}
 				catch (SocketTimeoutException e)
@@ -173,9 +173,15 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 				}
 				catch (IOException e)
 				{
-					System.err.println("Erreur d'E/S à l'acceptation du socket :\n" + e.getMessage());
+					System.err.println("Erreur d'E/S à l'acceptation d'une connexion :\n" + e.getMessage());
 					e.printStackTrace();
 				}
+			}
+			
+			// Arrête tous les serveurs encore actifs
+			for (HttpServerThread server : serverThreads)
+			{
+				if (!server.isDone()) { server.stop(); }
 			}
 			
 			System.out.println("Arrêt dans 3 secondes...");
@@ -184,7 +190,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 		}
 		catch (IOException e)
 		{
-			System.out.println("Erreur d'E/S à l'écoute du socket :\n" + e.getMessage());
+			System.out.println("Erreur d'E/S au «binding» du socket :\n" + e.getMessage());
 			e.printStackTrace();
 		}
 	}
