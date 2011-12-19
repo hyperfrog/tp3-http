@@ -214,7 +214,7 @@ public class DownloadThread implements Runnable
 								int i = 1;
 								do
 								{
-									f.renameTo(new File(this.savePath + this.fileName + " (" + i + ")." + this.extName));
+									f = new File(this.savePath + this.fileName + " (" + i + ")." + this.extName);
 									i++;
 								}
 								while (f.exists());
