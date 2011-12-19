@@ -59,7 +59,7 @@ public class HttpResponse
 	 */
 	public boolean send(OutputStream os, TransferController tc) throws IOException, BadHeaderException
 	{
-		boolean success = false;
+		boolean success = true;
 		
 		// Envoie le header
 		this.header.send(os);

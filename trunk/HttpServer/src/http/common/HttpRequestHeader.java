@@ -91,8 +91,10 @@ public class HttpRequestHeader extends HttpHeader
 	 */
 	public void parse() throws BadHeaderException
 	{
-		if (this.text != null) 
+		if (this.text != null && !this.text.isEmpty())
 		{
+			System.out.println(String.format("%s, %d", this.text, this.text.length()));
+			
 			ArrayList<String> headerLines = split(this.text, "\r\n", true);
 
 			Pattern pFullRequest = Pattern.compile("\\A(HEAD|GET|POST|PUT|DELETE|TRACE|OPTIONS|CONNECT|PATCH) (/[^ ]*) (HTTP/.+)\\Z");
@@ -132,7 +134,16 @@ public class HttpRequestHeader extends HttpHeader
 					throw new BadHeaderException("Entête incomplète. Le champ Host est obligatoire.");
 				}
 			}
+			else
+			{
+				throw new BadHeaderException();
+			}
 		}
+		else
+		{
+			throw new BadHeaderException();
+		}
+		
 	}
 	
 	// Parse les champs du header
