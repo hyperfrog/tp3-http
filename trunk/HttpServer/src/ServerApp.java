@@ -6,14 +6,23 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Properties;
 
-import http.server.SocketListener;
+import http.server.Dispatcher;
 
+/**
+ * La classe ServerApp sert à lancer le thread répartiteur de requêtes.
+ * 
+ * @author Christian Lesage
+ * @author Alexandre Tremblay
+ *
+ */
 public class ServerApp
 {
 	private final static String DEFAULT_CONFIG_FILE = "server.cfg";
 
 	/**
-	 * @param args
+	 * Point d'entrée du serveur. Lance le thread répartiteur de requêtes et attend sa mort.
+	 * 
+	 * @param args Facultatif : chemin du fichier de configuration à utiliser 
 	 */
 	public static void main(String[] args)
 	{
@@ -26,13 +35,11 @@ public class ServerApp
 		int portNum = 0;
 		int duration = 0;
 
-		// Read properties file.
 		Properties properties = new Properties();
-		
 		InputStream is = null;
-		
 		try
 		{
+			// Lit le fichier de configuration spécifié dans la ligne de commange
 			is = new FileInputStream((args.length > 0) ? args[0] : "");
 			System.out.println("Utilisation du fichier de configuation \"" + args[0] + "\" spécifié dans la ligne de commande.");
 		}
@@ -44,17 +51,20 @@ public class ServerApp
 			}
 			try
 			{
+				// Lit le fichier de configuration se trouvant dans le répertoire courant
 				is = new FileInputStream(userDir + fileSeparator + ServerApp.DEFAULT_CONFIG_FILE);
 				System.out.println("Utilisation du fichier de configuation \"" + ServerApp.DEFAULT_CONFIG_FILE + "\" trouvé dans \"" + userDir + "\".");
 			}
 			catch (FileNotFoundException e2)
 			{
+				// Lit le fichier de configuration interne
 				System.out.println("Impossible de trouver un fichier de configuation nommé \"" + ServerApp.DEFAULT_CONFIG_FILE + "\" dans \"" + userDir + "\".");
 				is = ServerApp.class.getResourceAsStream("cfg/" + ServerApp.DEFAULT_CONFIG_FILE);
 				System.out.println("Utilisation de la configuation par défaut.");
 			}
 		}
 		
+		// Analyse les paramètres du fichier de configuration
 		if (is != null)
 		{
 			try
@@ -96,6 +106,7 @@ public class ServerApp
 			}			
 		}
 		
+		// Indique la configuration utilisée  
 		System.out.println("Configuration : ");
 		System.out.println("Chemin absolu des fichiers du serveur : " + serverPath);
 		System.out.println("Chemin relatif du site Web : " + siteFolder);
@@ -113,29 +124,32 @@ public class ServerApp
 			
 		System.out.println();
 
-		SocketListener sl = new SocketListener(serverPath, siteFolder, ipAddress, portNum);
-		Thread slt = new Thread(sl);
-		slt.start();
+		// Démarre le répartiteur de requêtes
+		Dispatcher dispatcher = new Dispatcher(serverPath, siteFolder, ipAddress, portNum);
+		Thread dispatcherThread = new Thread(dispatcher);
+		dispatcherThread.start();
 		
 		System.out.println("Serveur démarré.");
 		
 		try
 		{
+			// Si une durée d'exécution a été spécifiée
 			if (duration > 0)
 			{
 				int t = 0;
 				
-				while (t < 2 * duration && slt.isAlive())
+				// Attend la fin du délai ou la mort du thread 
+				while (t < 2 * duration && dispatcherThread.isAlive())
 				{
 					Thread.sleep(500);
 					t++;
 				}
-				
-				sl.stop();
+				// Demande gentiment au répartiteur de se suicider
+				dispatcher.stop();
 			}
-			else
+			else // Attend la mort naturelle du répartiteur
 			{
-				slt.join();
+				dispatcherThread.join();
 			}
 		}
 		catch (InterruptedException e)

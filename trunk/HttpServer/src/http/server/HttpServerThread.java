@@ -2,22 +2,20 @@ package http.server;
 
 import static util.BasicString.join;
 import static util.BasicString.split;
-import static util.BasicString.stringToMap;
 import http.common.BadHeaderException;
 import http.common.HttpRequest;
 import http.common.HttpRequestHeader;
 import http.common.HttpResponse;
 import http.common.HttpResponseHeader;
-import http.common.HttpResponse.TransferController;
+import http.common.TransferController;
 import http.server.event.RequestEvent;
 import http.server.event.RequestEventProcessor;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,7 +23,7 @@ import java.util.regex.Pattern;
 import util.DateUtil;
 
 /**
- * Cette classe modélise un serveur HTTP s'exécutant dans un thread.
+ * Cette classe modélise un serveur HTTP qui répond à une requête en s'exécutant dans un thread.
  * 
  * @author Christian Lesage
  * @author Alexandre Tremblay
@@ -90,26 +88,28 @@ public class HttpServerThread implements Runnable
 	 */
 	public void run()
 	{
+		// Crée la requête d'entrée
+		this.request = new HttpRequest();
+		
+		HttpRequestHeader requestHeader = this.request.getHeader();
+
 		try
 		{
-			// Crée une requête d'entrée
-			this.request = new HttpRequest();
-			
 			// Attend de recevoir un header pour la requête
-			HttpRequestHeader requestHeader = this.request.getHeader();
 			requestHeader.receive(this.socket.getInputStream());
 			
 			this.response = new HttpResponse();
 			HttpResponseHeader responseHeader = this.response.getHeader();
 
-			this.tc = this.response.new TransferController(0, false);
+			// Limite le transfert à 1000 Ko/s
+			this.tc = new TransferController(1000, false);
 
 			try
 			{
 				// Tente de parser le header
 				requestHeader.parse();
 				
-				System.out.println(String.format("Thread %d (Requête)", Thread.currentThread().getId()));
+				System.out.println(String.format("Transaction %s (Requête)", Thread.currentThread().getName()));
 				System.out.print(requestHeader.getText());
 			
 				// Envoie un évènement de requête reçue pour permettre d'effectuer un traitement différent
@@ -138,7 +138,7 @@ public class HttpServerThread implements Runnable
 							filePath = join(split(filePath, "/"), FILE_SEP);
 						}
 
-						System.out.println("Fichier à servir : " + filePath);
+//						System.out.println("Fichier à servir : " + filePath);
 
 						File f = new File(filePath);
 						
@@ -188,7 +188,7 @@ public class HttpServerThread implements Runnable
 					}
 				}
 			}
-			catch (BadHeaderException e)
+			catch (BadHeaderException e) // Pas capable d'analyser le header de la requête du client
 			{
 				responseHeader.setStatusCode(400); // Bad Request
 			}
@@ -219,7 +219,7 @@ public class HttpServerThread implements Runnable
 
 				try
 				{
-					System.out.println(String.format("Thread %d (Réponse)", Thread.currentThread().getId()));
+					System.out.println(String.format("Transaction %s (Réponse)", Thread.currentThread().getName()));
 					responseHeader.make();
 					
 					System.out.print(responseHeader.getText());
@@ -227,14 +227,15 @@ public class HttpServerThread implements Runnable
 					// Envoie la réponse
 					this.response.send(this.socket.getOutputStream(), this.tc);
 				}
-				catch (BadHeaderException e1) // Pas capable de créer le header...
+				catch (BadHeaderException e1) // Pas capable de créer le header de réponse.
 				{
-					try // Essaie de faire un header avec le code 500 
+					try // Essaie de créer une nouvelle réponse avec le code 500 
 					{
-						responseHeader.setStatusCode(500); // Internal Server Error
-						
+						this.response = new HttpResponse();
 						response.setContent(e1.getMessage().getBytes());
 						
+						responseHeader = this.response.getHeader();
+						responseHeader.setStatusCode(500); // Internal Server Error
 						responseHeader.make();
 						
 						System.out.print(responseHeader.getText());
@@ -244,23 +245,37 @@ public class HttpServerThread implements Runnable
 					}
 					catch (BadHeaderException e2) // Pas capable..
 					{
-						// Écrit directement sur le socket.
-						this.socket.getOutputStream().write(new String(
-								"HTTP/1.1 500 Internal Server Error\r\n" +
-								"Content-Length: 0\r\n\r\n").getBytes());
+						System.out.println("Erreur 500");
+						
+						// Envoie une réponse «codée dur»  directement sur le socket. 
+						OutputStreamWriter osw = new OutputStreamWriter(this.socket.getOutputStream());
+						osw.write("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
+						osw.flush();
 					}
-				}
-				finally
-				{
-					this.socket.close();
 				}
 			}
 		}
 		catch (IOException e)
 		{
-			System.err.println("Erreur d'E/S : " + e.getMessage());
-			e.printStackTrace();
+			System.err.println("Connexion interrompue.");
+//			System.err.println("Erreur d'E/S : " + e.getMessage());
+//			e.printStackTrace();
 		}
+		finally
+		{
+			if (!this.socket.isClosed())
+			{
+				try { this.socket.close(); } catch (IOException unused) {}
+			}
+		}
+	}
+	
+	/**
+	 * Permet d'arrêter un transfert.
+	 */
+	public void stop()
+	{
+		this.tc.stopped = true;
 	}
 
 	/**
