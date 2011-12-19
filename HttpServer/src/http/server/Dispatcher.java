@@ -133,7 +133,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 			ServerSocket listener = new ServerSocket(portNum, BACKLOG, InetAddress.getByName(ipAddress));
 			
 			// Programme un délai d'attente de connexion pour éviter un blocage
-			listener.setSoTimeout(100);
+			listener.setSoTimeout(500);
 			
 			Socket clientSocket;
 

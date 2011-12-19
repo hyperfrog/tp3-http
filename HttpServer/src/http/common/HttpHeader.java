@@ -117,10 +117,12 @@ public abstract class HttpHeader
 		String line;
 		
 		// Lit l'en-tête (header)
-		do
+		do 
 		{
-			line = in.readLine();
-			headerText += line + "\r\n";
+			if ((line = in.readLine()) != null)
+			{
+				headerText += line + "\r\n";
+			}
 
 		} while (line != null && !line.isEmpty());
 

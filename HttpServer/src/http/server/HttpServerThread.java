@@ -112,17 +112,17 @@ public class HttpServerThread implements Runnable
 			this.response = new HttpResponse();
 			HttpResponseHeader responseHeader = this.response.getHeader();
 
+			synchronized (this.evtProcessor) 
+			{
+				System.out.println(String.format("Transaction %s : Réception d'une requête", Thread.currentThread().getName()));
+				System.out.print(requestHeader.getText());
+			}
+		
 			try
 			{
 				// Tente de parser le header
 				requestHeader.parse();
 				
-				synchronized (this.evtProcessor) 
-				{
-					System.out.println(String.format("Transaction %s : Réception d'une requête", Thread.currentThread().getName()));
-					System.out.print(requestHeader.getText());
-				}
-			
 				// Envoie un évènement de requête reçue pour permettre d'effectuer un traitement différent
 				RequestEvent evt = new RequestEvent(this);
 				this.evtProcessor.requestEventReceived(evt);
@@ -269,6 +269,10 @@ public class HttpServerThread implements Runnable
 						osw.flush();
 					}
 				}
+			}
+			else
+			{
+				System.out.println(String.format("Transaction %s : Socket déjà fermé !", Thread.currentThread().getName()));
 			}
 		}
 		catch (IOException e)
