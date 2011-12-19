@@ -169,10 +169,10 @@ public class DownloadThread implements Runnable
 		// Limite le transfert à 100 Ko/s
 		this.tc = new TransferController(100);
 		
-		boolean retry = true;
-		
 		try
 		{
+			boolean retry = true;
+			
 			do
 			{
 				this.setCurrentState(DownloadState.WAITING_SERVER);
@@ -273,7 +273,11 @@ public class DownloadThread implements Runnable
 					
 					this.closeConnection();
 				}
-
+				else
+				{
+					retry = false;
+				}
+				
 				// Si il y a eu une erreur lors de l'envoi de la requête on réessait d'envoyer la requête
 				if (retry)
 				{
@@ -290,7 +294,7 @@ public class DownloadThread implements Runnable
 			e.printStackTrace();
 		}
 		
-		if (retry)
+		if (this.connectionAttempt >= RETRY_ATTEMPT)
 		{
 			this.setCurrentState(DownloadState.ERROR);
 		}
