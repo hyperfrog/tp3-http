@@ -10,7 +10,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,23 +23,23 @@ import http.server.event.RequestEvent;
 import http.server.event.RequestEventProcessor;
 
 /**
- * La classe SocketListener agit comme un répartiteur qui accepte les connexions entrantes  
- * et crée pour chacune un thread pour l'exécution d'une instance de serveur HTTP. 
+ * La classe Dispatcher agit comme un répartiteur qui accepte les connexions entrantes  
+ * et crée pour chacune un thread où s'exécute d'une instance de serveur HTTP. 
  * 
  * @author Christian Lesage
  * @author Alexandre Tremblay
  */
-public class SocketListener implements RequestEventProcessor, Runnable
+public class Dispatcher implements RequestEventProcessor, Runnable
 {
 	// Nom du fichier contenant la liste des extensions et des types MIME correspondants
 	private final static String MIME_TYPES_FILE = "mime_types.txt";
 	
+	// Nombre max. de de connexions simultanées
+	private final static int MAX_CONNECTIONS = 2;
+	
 	// Nombre max. de connexions en attente dans la file 
 	private final static int BACKLOG = 10;
 
-	// Nombre max. de de threads simultanés
-	private final static int MAX_THREADS = 10;
-	
 	// Chemin absolu du dossier où se trouvent les fichiers nécessaires au serveur
 	private final String serverPath;
 	
@@ -54,15 +57,19 @@ public class SocketListener implements RequestEventProcessor, Runnable
 	
 	private volatile Thread runThread;
 	
+	private List<Thread> serverThreads = new ArrayList<Thread>();
+	
+	private int transactionId = 1; 
+	
 	/**
-	 * Construit un écouteur de connexions entrantes.
+	 * Construit un répartiteur de requêtes.
 	 * 
 	 * @param serverPath Chemin absolu du dossier où se trouvent les fichiers nécessaires au serveur
 	 * @param siteFolder Chemin relatif du dossier où se trouvent les fichiers du site Web à servir
 	 * @param ipAddress Addresse IP utilisée pour les connexions entrantes
 	 * @param portNum Port utilisé pour les connexions entrantes
 	 */
-	public SocketListener(String serverPath, String siteFolder, String ipAddress, int portNum)
+	public Dispatcher(String serverPath, String siteFolder, String ipAddress, int portNum)
 	{
 		this.serverPath = serverPath;
 		this.siteFolder = siteFolder;
@@ -70,20 +77,18 @@ public class SocketListener implements RequestEventProcessor, Runnable
 		this.portNum = portNum;
 		
 		// Lecture du fichiers des types MIME à la première instanciation de la classe
-		if (SocketListener.mimeTypes == null)
+		if (Dispatcher.mimeTypes == null)
 		{
-			// Read MIME types
-			SocketListener.mimeTypes = new HashMap<String, String>();
+			Dispatcher.mimeTypes = new HashMap<String, String>();
 
 			File mtFile = new File(serverPath + MIME_TYPES_FILE);
 			FileInputStream fis = null;
 			try
 			{
-				// Read the file   
 				fis = new FileInputStream(mtFile);
 				byte[] mtData = new byte[(int) mtFile.length()];
 				fis.read(mtData);
-				SocketListener.mimeTypes = stringToMap(new String(mtData), "\n", "=", true);
+				Dispatcher.mimeTypes = stringToMap(new String(mtData), "\n", "=", true);
 			}
 			catch (IOException e)
 			{
@@ -100,7 +105,7 @@ public class SocketListener implements RequestEventProcessor, Runnable
 	}
 	
 	/**
-	 * Arrête le thread lié à cet objet.
+	 * Arrête le thread associé à cet objet.
 	 */
 	public void stop()
 	{
@@ -134,28 +139,37 @@ public class SocketListener implements RequestEventProcessor, Runnable
 				try
 				{
 					clientSocket = listener.accept();
-					int nbThreads = Thread.activeCount();
 					
-					System.out.print(String.format("Il y a présentement %d thread(s) actif(s).\n\n", nbThreads));
-					
-					// Si le nombre max. de threads est atteint, attend un peu 
-					while (nbThreads >= MAX_THREADS)
+					// Si le nombre max. de connexions est atteint 
+					while (this.serverThreads.size() >= MAX_CONNECTIONS)
 					{
+						// Attend un peu
 						try { Thread.sleep(100); } catch (InterruptedException unused) {}
+
+						// Enlève les serveurs «morts» de la liste
+						Iterator<Thread> iter = this.serverThreads.iterator();
+						
+						while (iter.hasNext())
+						{
+						    if (!iter.next().isAlive())
+						    {
+						    	iter.remove();
+						    }
+						}
 					}
 
-					// Crée un serveur pour le thread
-					HttpServerThread server = new HttpServerThread(clientSocket, serverPath, siteFolder, SocketListener.mimeTypes, this);
+					// Crée un serveur 
+					HttpServerThread server = new HttpServerThread(clientSocket, serverPath, siteFolder, Dispatcher.mimeTypes, this);
 					
-					// Crée le thread en mode daemon pour éviter qu'il reste vivant après une demande d'arrêt du serveur
+					// Crée le thread du serveur en mode daemon pour éviter qu'il reste vivant après une demande d'arrêt du répartiteur
 					Thread t = new Thread(server);
 					t.setDaemon(true);
+					t.setName("" + this.transactionId++);
+					this.serverThreads.add(t);
 					t.start();
 				}
 				catch (SocketTimeoutException e)
 				{
-//					System.err.println("Délai de connexion dépassé à l'acceptation du socket :\n" + e.getMessage());
-//					e.printStackTrace();
 				}
 				catch (IOException e)
 				{
@@ -187,6 +201,7 @@ public class SocketListener implements RequestEventProcessor, Runnable
 		
 		String resourcePath = request.getHeader().getPath();
 		
+		// Intercepte une requête pour la ressource "/paramecho" 
 		if (resourcePath.equals("/paramecho"))
 		{
 			evt.cancel = true;
@@ -194,6 +209,7 @@ public class SocketListener implements RequestEventProcessor, Runnable
 			response.getHeader().setStatusCode(200);
 			response.getHeader().setCacheable(false);
 
+			// Renvoie au client les paramètres qu'il a envoyés
 			String content = new String();
 			
 			Set<String> keys = request.getHeader().getParamKeySet();
@@ -201,26 +217,26 @@ public class SocketListener implements RequestEventProcessor, Runnable
 			for(String key : keys)
 			{
 				String value = request.getHeader().getParam(key);
-//				if (value != null)
-				{
-					content += key + " = " + value + "\n";
-				}
+				content += key + " = " + value + "\n";
 			}
 			
 //			res.setContent(content, Charset.forName("ISO-8859-1"));
 			response.setContent(content, Charset.forName("UTF-8"));
 
 		}
+		// Intercepte une requête pour la ressource "/admin" 
 		else if (resourcePath.equals("/admin"))
 		{
 			evt.cancel = true;
 
 			response.getHeader().setStatusCode(200);
 
+			// Lit le paramètre "command"
 			String command = request.getHeader().getParam("command");
 			
 			String content = "Administration du serveur :\n\n";
 
+			// Si la commande est "shutdown", arrête le serveur
 			if (command != null && command.equals("shutdown"))
 			{
 				content += "Arrêt du serveur.\n\n";
@@ -233,7 +249,7 @@ public class SocketListener implements RequestEventProcessor, Runnable
 				this.stop();
 			}
 			
-			try { Thread.sleep(500); } catch (InterruptedException unused) {}
+//			try { Thread.sleep(500); } catch (InterruptedException unused) {}
 		}
 	}
 }

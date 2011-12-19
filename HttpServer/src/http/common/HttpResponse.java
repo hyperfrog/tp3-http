@@ -18,38 +18,6 @@ import java.nio.charset.Charset;
  */
 public class HttpResponse
 {
-	/**
-	 * Un TransferController est une structure contenant les propriétés d'un transfert
-	 * 
-	 * @author Christian Lesage
-	 * @author Alexandre Tremblay
-	 *
-	 */
-	public class TransferController
-	{
-		/**
-		 * Débit max. du transfert en ko/s
-		 */
-		public int maxRate;
-		
-		/**
-		 * Indique si le transfert doit s'arrêter
-		 */
-		public boolean stopped;
-		
-		/**
-		 * Construit un TransferController
-		 * 
-		 * @param maxRate Débit max. du transfert en ko/s
-		 * @param stopped Indique si le transfert doit s'arrêter (mettre à false à la création)
-		 */
-		public TransferController(int maxRate, boolean stopped)
-		{
-			this.maxRate = maxRate;
-			this.stopped = stopped;
-		}
-	}
-	
 	// Entête de la réponse
 	private HttpResponseHeader header;
 	
@@ -161,12 +129,12 @@ public class HttpResponse
 		{
 			os.write(buf, 0, len);
 
-			if (tc.maxRate > 0)
+			if (tc.getMaxRate() > 0)
 			{
 				try
 				{
 					// Attend le temps nécessaire pour ne pas dépasser le débit max.
-					long delay = (1000 - (System.currentTimeMillis() - startTime)) / tc.maxRate;
+					long delay = (1000 - (System.currentTimeMillis() - startTime)) / tc.getMaxRate();
 
 					Thread.sleep(delay > 0 ? delay : 0);
 				}

@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 import http.common.BadHeaderException;
 import http.common.HttpRequest;
 import http.common.HttpResponse;
-import http.common.HttpResponse.TransferController;
+import http.common.TransferController;
 import http.common.HttpResponseHeader;
 
 /**
@@ -80,7 +80,7 @@ public class DownloadThread implements Runnable
 	private DownloadState currentState;
 	
 	// Propriétés du transfert
-	private TransferController tc;
+	private TransferController tc = null;
 	
 	/**
 	 * Créer un nouveau thread pour télécharger le fichier situé à l'adresse URL
@@ -100,7 +100,7 @@ public class DownloadThread implements Runnable
 		this.currentState = DownloadState.NEW;
 		
 		this.fileName = path.getPath().substring(path.getPath().lastIndexOf("/") + 1, path.getPath().lastIndexOf("."));
-		this.extName = path.getPath().substring(path.getPath().lastIndexOf(".") + 1, path.getPath().length());		
+		this.extName = path.getPath().substring(path.getPath().lastIndexOf(".") + 1, path.getPath().length());
 		
 		// Construit la requête à envoyer
 		this.buildRequest();
@@ -152,13 +152,16 @@ public class DownloadThread implements Runnable
 	 */
 	public void run()
 	{
+		// Limite le transfert à 100 Ko/s
+		this.tc = new TransferController(100, false);
+
 		try
 		{
 			boolean retry = true;
 			
 			do
 			{
-				if (retry)
+//				if (retry)
 				{
 					this.openConnection();
 				}
@@ -225,15 +228,14 @@ public class DownloadThread implements Runnable
 							
 							this.setCurrentState(DownloadState.DOWNLOADING);
 							
-							this.tc = this.response.new TransferController(1000, false);
-							
 							// Effectue la sauvegarde
 							// TODO : Le début du fichier n'est pas sauvegardé
 							if (this.response.receiveContent(this.socket.getInputStream(), this.tc))
 							{
 								this.setCurrentState(DownloadState.DONE);
-								retry = false;
 							}
+							
+							retry = false;
 						}
 					}
 					catch (BadHeaderException e) // Incapable d'analyser le header de réponse 
@@ -323,7 +325,7 @@ public class DownloadThread implements Runnable
 		{
 			this.currentState = newState;
 			
-			if (newState.equals(DownloadState.STOPPED))
+			if (newState.equals(DownloadState.STOPPED) && this.tc != null)
 			{
 				this.tc.stopped = true;
 			}
