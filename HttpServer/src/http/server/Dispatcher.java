@@ -108,7 +108,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 	}
 	
 	/**
-	 * Arrête le thread associé à cet objet.
+	 * Arrête le thread d'exécution du répartiteur.
 	 */
 	public void stop()
 	{
@@ -116,7 +116,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 		this.runThread = null;
 		if (tmpRunThread != null)
 		{
-//			tmpRunThread.interrupt();
+			tmpRunThread.interrupt();
 		}
 	}
 	
@@ -184,6 +184,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 				if (!server.isDone()) { server.stop(); }
 			}
 			
+			// 3 secondes de grâce...
 			System.out.println("Arrêt dans 3 secondes...");
 			try { Thread.sleep(3000); } catch (InterruptedException unused) {}
 
