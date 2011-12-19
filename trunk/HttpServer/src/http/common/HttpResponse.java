@@ -53,7 +53,7 @@ public class HttpResponse
 	 * Envoie la réponse HTTP sur la stream de sortie passée en paramètre. 
 	 * 
 	 * @param os OutputStream pour l'écriture de la réponse 
-	 * @param tc débit max. du téléversement en ko/s
+	 * @param tc Contrôleur du transfert
 	 * @throws IOException
 	 */
 	public void send(OutputStream os, TransferController tc) throws IOException, BadHeaderException
@@ -79,7 +79,7 @@ public class HttpResponse
 	 * Reçoit la partie contenu d'une réponse HTTP.
 	 * 
 	 * @param is InputStream pour la lecture du contenu de la réponse
-	 * @param tc débit max. du téléchargement en ko/s 
+	 * @param tc Contrôleur du transfert  
 	 * @return vrai si le téléchargement a été complété, faux sinon
 	 * @throws IOException
 	 */
@@ -116,10 +116,11 @@ public class HttpResponse
 		return false;
 	}
 	
-	// Effectue la copie d'une stream d'entrée vers une stream de sortie
+	// Effectue la copie d'une stream d'entrée vers une stream de sortie.
+	// Le contrôleur permet d'arrêter le transfert à tout moment ou de changer son débit max. 
 	private void doCopy(InputStream is, OutputStream os, TransferController tc) throws IOException
 	{
-		// Transfère 1 ko à la fois
+		// Transfère 1 Ko à la fois
 		byte[] buf = new byte[1024];
 		int len;
 		

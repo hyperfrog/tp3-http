@@ -1,9 +1,8 @@
-/**
- * Une exception de type BadHeaderExcetption est générée quand une entête HTTP ne peut pas être créée ou analysée. 
- */
 package http.common;
 
 /**
+ * Une exception de type BadHeaderExcetption est générée quand une entête HTTP ne peut pas être créée ou analysée.
+ *  
  * @author Christian Lesage
  * @author Alexandre Tremblay
  *

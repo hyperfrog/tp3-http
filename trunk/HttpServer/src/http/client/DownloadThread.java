@@ -152,7 +152,7 @@ public class DownloadThread implements Runnable
 	public void run()
 	{
 		// Limite le transfert à 100 Ko/s
-		this.tc = new TransferController(100, false);
+		this.tc = new TransferController(100);
 		
 		try
 		{

@@ -23,12 +23,11 @@ public class TransferController
 	 * Construit un TransferController
 	 * 
 	 * @param maxRate Débit max. du transfert en Ko/s
-	 * @param stopped Indique si le transfert doit s'arrêter (mettre à false à la création)
 	 */
-	public TransferController(int maxRate, boolean stopped)
+	public TransferController(int maxRate)
 	{
 		this.setMaxRate(maxRate);
-		this.stopped = stopped;
+		this.stopped = false;
 	}
 
 	/**
@@ -38,7 +37,7 @@ public class TransferController
 	 */
 	public int getMaxRate() 
 	{
-		return maxRate;
+		return this.maxRate;
 	}
 
 	/**

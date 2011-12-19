@@ -1,6 +1,6 @@
 package http.common;
 
-import static util.BasicString.split;
+import static util.StringUtil.split;
 
 import java.util.ArrayList;
 import java.util.Date;

@@ -1,7 +1,7 @@
 package http.server;
 
-import static util.BasicString.join;
-import static util.BasicString.split;
+import static util.StringUtil.join;
+import static util.StringUtil.split;
 import http.common.BadHeaderException;
 import http.common.HttpRequest;
 import http.common.HttpRequestHeader;
@@ -57,6 +57,9 @@ public class HttpServerThread implements Runnable
 	
 	// Séparateur de noms de dossier propre à la plateforme
 	private static final String FILE_SEP = System.getProperties().getProperty("file.separator");
+	
+	// Indique si le service de la requête est terminé 
+	private boolean done = false;
 
 	/**
 	 * Construit une instance de serveur HTTP s'exécutant dans un thread.  
@@ -83,13 +86,18 @@ public class HttpServerThread implements Runnable
 		this.evtProcessor = ep;
 	}
 
-	/* (non-Javadoc)
+	/**
+	 * Attend une requête, sert celle-ci, puis ferme la connexion.
+	 * 
 	 * @see java.lang.Runnable#run()
 	 */
 	public void run()
 	{
 		// Crée la requête d'entrée
 		this.request = new HttpRequest();
+
+		// Limite le transfert à 1000 Ko/s
+		this.tc = new TransferController(1000);
 		
 		HttpRequestHeader requestHeader = this.request.getHeader();
 
@@ -101,16 +109,16 @@ public class HttpServerThread implements Runnable
 			this.response = new HttpResponse();
 			HttpResponseHeader responseHeader = this.response.getHeader();
 
-			// Limite le transfert à 1000 Ko/s
-			this.tc = new TransferController(1000, false);
-
 			try
 			{
 				// Tente de parser le header
 				requestHeader.parse();
 				
-				System.out.println(String.format("Transaction %s (Requête)", Thread.currentThread().getName()));
-				System.out.print(requestHeader.getText());
+				synchronized (this.evtProcessor) 
+				{
+					System.out.println(String.format("Transaction %s (Requête)", Thread.currentThread().getName()));
+					System.out.print(requestHeader.getText());
+				}
 			
 				// Envoie un évènement de requête reçue pour permettre d'effectuer un traitement différent
 				RequestEvent evt = new RequestEvent(this);
@@ -217,12 +225,16 @@ public class HttpServerThread implements Runnable
 					}
 				}
 
-				try
+				try // Fabrique le header et envoie la réponse
 				{
-					System.out.println(String.format("Transaction %s (Réponse)", Thread.currentThread().getName()));
-					responseHeader.make();
 					
-					System.out.print(responseHeader.getText());
+					synchronized (this.evtProcessor) 
+					{
+						System.out.println(String.format("Transaction %s (Réponse)", Thread.currentThread().getName()));
+						responseHeader.make();
+						
+						System.out.print(responseHeader.getText());
+					}
 
 					// Envoie la réponse
 					this.response.send(this.socket.getOutputStream(), this.tc);
@@ -247,7 +259,7 @@ public class HttpServerThread implements Runnable
 					{
 						System.out.println("Erreur 500");
 						
-						// Envoie une réponse «codée dur»  directement sur le socket. 
+						// Envoie une réponse «codée dur» directement sur le socket. 
 						OutputStreamWriter osw = new OutputStreamWriter(this.socket.getOutputStream());
 						osw.write("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
 						osw.flush();
@@ -257,9 +269,7 @@ public class HttpServerThread implements Runnable
 		}
 		catch (IOException e)
 		{
-			System.err.println("Connexion interrompue.");
-//			System.err.println("Erreur d'E/S : " + e.getMessage());
-//			e.printStackTrace();
+			System.err.println(String.format("Transaction %s : Connexion interrompue.", Thread.currentThread().getName()));
 		}
 		finally
 		{
@@ -267,11 +277,23 @@ public class HttpServerThread implements Runnable
 			{
 				try { this.socket.close(); } catch (IOException unused) {}
 			}
+			
+			this.done = true;
 		}
 	}
 	
 	/**
-	 * Permet d'arrêter un transfert.
+	 * Indique si le service de la requête est terminé.
+	 * 
+	 * @return vrai si le service de la requête est terminé, faux sinon 
+	 */
+	public boolean isDone() 
+	{
+		return this.done;
+	}
+
+	/**
+	 * Permet d'arrêter le transfert en cours.
 	 */
 	public void stop()
 	{
