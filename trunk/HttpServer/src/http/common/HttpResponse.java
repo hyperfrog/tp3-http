@@ -43,7 +43,7 @@ public class HttpResponse
 		this.fileName = "";
 		this.header.setProtocol("HTTP/1.1");
 		this.header.setStatusCode(0);
-		this.header.setField("Server", "CLES 0.1");
+		this.header.setField("Server", "Okey Dokey Server 0.2");
 		this.header.setField("Connection", "close");
 		this.isCacheable = true;
 		this.isContentSendable = true;
