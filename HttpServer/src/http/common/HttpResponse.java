@@ -54,10 +54,13 @@ public class HttpResponse
 	 * 
 	 * @param os OutputStream pour l'écriture de la réponse 
 	 * @param tc Contrôleur du transfert
+	 * @return vrai si le téléversement a été complété, faux sinon 
 	 * @throws IOException
 	 */
-	public void send(OutputStream os, TransferController tc) throws IOException, BadHeaderException
+	public boolean send(OutputStream os, TransferController tc) throws IOException, BadHeaderException
 	{
+		boolean success = false;
+		
 		// Envoie le header
 		this.header.send(os);
 		
@@ -68,11 +71,13 @@ public class HttpResponse
 		{
 			InputStream is = (this.content == null) ? new FileInputStream(new File(this.fileName)) : new ByteArrayInputStream(this.content);
 			
-			this.doCopy(is, os, tc);
+			success = this.doCopy(is, os, tc);
 
 			is.close();
 			os.flush();
 		}
+		
+		return success;
 	}
 	
 	/**
@@ -118,7 +123,7 @@ public class HttpResponse
 	
 	// Effectue la copie d'une stream d'entrée vers une stream de sortie.
 	// Le contrôleur permet d'arrêter le transfert à tout moment ou de changer son débit max. 
-	private void doCopy(InputStream is, OutputStream os, TransferController tc) throws IOException
+	private boolean doCopy(InputStream is, OutputStream os, TransferController tc) throws IOException
 	{
 		// Transfère 1 Ko à la fois
 		byte[] buf = new byte[1024];
@@ -143,6 +148,8 @@ public class HttpResponse
 				}
 			}
 		}
+		
+		return len == -1;
 	}
 	
 	/**
