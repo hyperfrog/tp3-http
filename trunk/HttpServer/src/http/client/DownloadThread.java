@@ -97,7 +97,7 @@ public class DownloadThread implements Runnable
 		this.savePath = savePath;
 		
 		this.urlName = path.toExternalForm();
-		this.currentState = DownloadState.NEW;
+		this.currentState = DownloadState.STOPPED;
 		
 		this.fileName = path.getPath().substring(path.getPath().lastIndexOf("/") + 1, path.getPath().lastIndexOf("."));
 		this.extName = path.getPath().substring(path.getPath().lastIndexOf(".") + 1, path.getPath().length());
@@ -161,10 +161,7 @@ public class DownloadThread implements Runnable
 			
 			do
 			{
-//				if (retry)
-				{
-					this.openConnection();
-				}
+				this.openConnection();
 				
 				try
 				{
@@ -229,7 +226,6 @@ public class DownloadThread implements Runnable
 							this.setCurrentState(DownloadState.DOWNLOADING);
 							
 							// Effectue la sauvegarde
-							// TODO : Le début du fichier n'est pas sauvegardé
 							if (this.response.receiveContent(this.socket.getInputStream(), this.tc))
 							{
 								this.setCurrentState(DownloadState.DONE);
