@@ -93,9 +93,8 @@ public class HttpResponse
 			{
 				length = Long.parseLong(this.header.getField("Content-Length"));
 				
-				File tempName = new File(this.fileName);
-				
-				File outputFile = File.createTempFile(tempName.getName(), ".tmp");
+				File outputFile = new File(this.fileName + ".tmp");
+				//File outputFile = File.createTempFile(tempName.getName(), ".tmp");
 				
 				OutputStream os = new FileOutputStream(outputFile);
 				
@@ -128,7 +127,7 @@ public class HttpResponse
 		for (long startTime = System.currentTimeMillis(); (len = is.read(buf)) > 0 && !tc.stopped; startTime = System.currentTimeMillis())
 		{
 			os.write(buf, 0, len);
-
+			
 			if (tc.getMaxRate() > 0)
 			{
 				try
