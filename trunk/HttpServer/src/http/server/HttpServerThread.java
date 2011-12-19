@@ -58,6 +58,9 @@ public class HttpServerThread implements Runnable
 	// Séparateur de noms de dossier propre à la plateforme
 	private static final String FILE_SEP = System.getProperties().getProperty("file.separator");
 	
+	// Indique si la réponse a été envoyée avec succès 
+	private boolean responseSent = false;
+
 	// Indique si le service de la requête est terminé 
 	private boolean done = false;
 
@@ -68,7 +71,7 @@ public class HttpServerThread implements Runnable
 	 * @param serverPath chemin absolu du dossier où se trouvent les fichiers nécessaires au serveur
 	 * @param siteFolder chemin relatif du dossier où se trouvent les fichiers du site Web à servir
 	 * @param mimeTypes dictionnaire des extensions et des types MIME correspondants 
-	 * @param ep objet traitant les évènements de requête reçue
+	 * @param ep objet traitant les évènements de requête reçue et servant de moniteur pour la synchronisation
 	 */
 	public HttpServerThread(Socket client, String serverPath, String siteFolder, Map<String, String> mimeTypes, RequestEventProcessor ep)
 	{
@@ -116,7 +119,7 @@ public class HttpServerThread implements Runnable
 				
 				synchronized (this.evtProcessor) 
 				{
-					System.out.println(String.format("Transaction %s (Requête)", Thread.currentThread().getName()));
+					System.out.println(String.format("Transaction %s : Réception d'une requête", Thread.currentThread().getName()));
 					System.out.print(requestHeader.getText());
 				}
 			
@@ -230,14 +233,15 @@ public class HttpServerThread implements Runnable
 					
 					synchronized (this.evtProcessor) 
 					{
-						System.out.println(String.format("Transaction %s (Réponse)", Thread.currentThread().getName()));
+						System.out.println(String.format("Transaction %s : Envoi de la réponse", Thread.currentThread().getName()));
 						responseHeader.make();
 						
 						System.out.print(responseHeader.getText());
 					}
 
 					// Envoie la réponse
-					this.response.send(this.socket.getOutputStream(), this.tc);
+					this.responseSent = this.response.send(this.socket.getOutputStream(), this.tc);
+					
 				}
 				catch (BadHeaderException e1) // Pas capable de créer le header de réponse.
 				{
@@ -269,10 +273,24 @@ public class HttpServerThread implements Runnable
 		}
 		catch (IOException e)
 		{
-			System.err.println(String.format("Transaction %s : Connexion interrompue.", Thread.currentThread().getName()));
+			System.out.println(String.format("Transaction %s : Connexion interrompue.", Thread.currentThread().getName()));
 		}
 		finally
 		{
+			synchronized (this.evtProcessor) 
+			{
+				System.out.print(String.format("Transaction %s : Fin de la transaction. ", Thread.currentThread().getName()));
+				
+				if (this.responseSent)
+				{
+					System.out.println(String.format("La réponse a été envoyée au complet.\n", Thread.currentThread().getName()));
+				}
+				else
+				{
+					System.out.println(String.format("La réponse n'a pas été envoyée au complet.\n", Thread.currentThread().getName()));
+				}
+			}
+
 			if (!this.socket.isClosed())
 			{
 				try { this.socket.close(); } catch (IOException unused) {}
