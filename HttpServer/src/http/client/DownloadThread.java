@@ -25,7 +25,6 @@ public class DownloadThread implements Runnable
 	// Tous les états possible du téléchargement
 	public static enum DownloadState
 	{
-		NEW ("Nouveau téléchargement"), 
 		DOWNLOADING ("Téléchargement en cours..."), 
 		DONE ("Terminé"), 
 		RETRYING (String.format("Renvoi de la requête dans %d secondes", RETRY_WAIT_TIME / 1000)), 
@@ -99,7 +98,7 @@ public class DownloadThread implements Runnable
 		this.urlName = path.toExternalForm();
 		this.currentState = DownloadState.STOPPED;
 		
-		this.fileName = path.getPath().substring(path.getPath().lastIndexOf("/") + 1, path.getPath().lastIndexOf("."));
+		this.fileName = path.getPath().substring(path.getPath().lastIndexOf(File.separator) + 1, path.getPath().lastIndexOf("."));
 		this.extName = path.getPath().substring(path.getPath().lastIndexOf(".") + 1, path.getPath().length());
 		
 		// Construit la requête à envoyer
@@ -154,7 +153,7 @@ public class DownloadThread implements Runnable
 	{
 		// Limite le transfert à 100 Ko/s
 		this.tc = new TransferController(100, false);
-
+		
 		try
 		{
 			boolean retry = true;
@@ -165,6 +164,8 @@ public class DownloadThread implements Runnable
 				
 				try
 				{
+					this.setCurrentState(DownloadState.WAITING);
+					
 					// Envoie la requête
 					this.request.send(this.socket.getOutputStream());
 
@@ -206,19 +207,21 @@ public class DownloadThread implements Runnable
 						{
 							this.fileSize = Integer.parseInt(responseHeader.getField("Content-Length"));
 							
-							File f = new File(this.savePath + this.fileName + "." + this.extName);
+							String checkPath = this.savePath + this.fileName + "." + this.extName;
 							
 							// On renomme le fichier en ajoutant «(i)» à la fin du nom du fichier
-							if (f.exists())
+							if (new File(checkPath).exists())
 							{
 								int i = 1;
 								do
 								{
-									f = new File(this.savePath + this.fileName + " (" + i + ")." + this.extName);
+									checkPath = this.savePath + this.fileName + " (" + i + ")." + this.extName;
 									i++;
 								}
-								while (f.exists());
+								while (new File(checkPath).exists() || new File(checkPath + ".tmp").exists());
 							}
+							
+							File f = new File(checkPath);
 							
 							// Indique le chemin du fichier à utiliser pour sauvegarder
 							this.response.setFileName(f.getAbsolutePath());
