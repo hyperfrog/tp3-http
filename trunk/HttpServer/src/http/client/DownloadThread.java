@@ -106,7 +106,7 @@ public class DownloadThread implements Runnable
 		this.currentState = DownloadState.NEW;
 		this.connectionAttempt = 0;
 		
-		this.fileName = path.getPath().substring(path.getPath().lastIndexOf(File.separator) + 1, path.getPath().lastIndexOf("."));
+		this.fileName = path.getPath().substring(path.getPath().lastIndexOf("/") + 1, path.getPath().lastIndexOf("."));
 		this.extName = path.getPath().substring(path.getPath().lastIndexOf(".") + 1, path.getPath().length());
 		
 		// Construit la requête à envoyer
