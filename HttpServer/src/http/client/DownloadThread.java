@@ -194,8 +194,13 @@ public class DownloadThread implements Runnable
 							// Tente de parser le header
 							responseHeader.parse();
 							
+							if (responseHeader.getStatusCode() == 400)
+							{
+								this.setCurrentState(DownloadState.ERROR);
+								retry = false;
+							}
 							// Si on reçoit un code 404, la page n'existe pas
-							if (responseHeader.getStatusCode() == 404)
+							else if (responseHeader.getStatusCode() == 404)
 							{
 								this.setCurrentState(DownloadState.NOT_FOUND);
 								retry = false;
