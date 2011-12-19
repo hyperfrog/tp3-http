@@ -248,25 +248,34 @@ public class HttpServerThread implements Runnable
 					try // Essaie de créer une nouvelle réponse avec le code 500 
 					{
 						this.response = new HttpResponse();
-						response.setContent(e1.getMessage().getBytes());
-						
 						responseHeader = this.response.getHeader();
+						
+						if (e1.getMessage() != null)
+						{
+							response.setContent(e1.getMessage().getBytes());
+						}
+						else
+						{
+							responseHeader.setField("Content-Length", "0");
+						}
+						
 						responseHeader.setStatusCode(500); // Internal Server Error
 						responseHeader.make();
 						
 						System.out.print(responseHeader.getText());
 
 						// Envoie la réponse
-						this.response.send(this.socket.getOutputStream(), this.tc);
+						this.responseSent = this.response.send(this.socket.getOutputStream(), this.tc);
 					}
 					catch (BadHeaderException e2) // Pas capable..
 					{
-						System.out.println("Erreur 500");
+						System.out.println(String.format("Transaction %s : Erreur 500", Thread.currentThread().getName()));
 						
 						// Envoie une réponse «codée dur» directement sur le socket. 
 						OutputStreamWriter osw = new OutputStreamWriter(this.socket.getOutputStream());
-						osw.write("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
+						osw.write("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
 						osw.flush();
+						this.responseSent = true;
 					}
 				}
 			}

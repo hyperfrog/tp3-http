@@ -206,16 +206,6 @@ public abstract class HttpHeader
 		return text;
 	}
 
-//	/**
-//	 * 
-//	 * 
-//	 * @param text the text to set
-//	 */
-//	public void setText(String text)
-//	{
-//		this.text = text;
-//	}
-
 	/**
 	 * Retourne le protocole spécifié dans la requête ou la réponse.
 	 *  
