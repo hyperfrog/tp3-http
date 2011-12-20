@@ -242,22 +242,40 @@ public class DownloadThread implements Runnable
 								}
 								
 								File f = new File(checkPath);
+								File tmp = new File(checkPath + ".tmp");
 								
 								// Indique le chemin du fichier à utiliser pour sauvegarder
 								this.response.setFileName(f.getAbsolutePath());
 								
 								this.setCurrentState(DownloadState.DOWNLOADING);
 								
+								retry = false;
+								
 								// Effectue la sauvegarde
-								if (this.response.receiveContent(this.socket.getInputStream(), this.tc))
+								boolean downSucceed = this.response.receiveContent(this.socket.getInputStream(), this.tc); 
+								
+								// Si la sauvegarde s'est déroulée sans problème
+								if (downSucceed)
 								{
 									this.setCurrentState(DownloadState.DONE);
-									retry = false;
 								}
-								else
+								// Si il y a eu une erreur lors de la sauvegarde, on supprime le fichier
+								// temporaire et on essaie de nouveau plus tard
+								else if (!downSucceed && !this.getCurrentState().equals(DownloadState.STOPPED))
 								{
 									this.setCurrentState(DownloadState.ERROR);
-									new File(checkPath + ".tmp").delete();
+									if (tmp.exists())
+									{
+										tmp.delete();
+									}
+									retry = true;
+								}
+								
+								// On supprime le fichier temporaire si on arrête le téléchargement
+								// pendant qu'il en train de sauvegarder.
+								if (this.getCurrentState().equals(DownloadState.STOPPED) && tmp.exists())
+								{
+									tmp.delete();
 								}
 							}
 						}
