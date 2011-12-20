@@ -67,7 +67,7 @@ public class StringUtil
 	}
 	
 	/**
-	 * Convertit une chaîne de caractères en dictionnaire de <String, String>.
+	 * Convertit une chaîne de caractères en dictionnaire.
 	 * 
 	 * @param in la chaîne à convertir
 	 * @param entrySep la séquence séparant les entrées du dictionnaire

@@ -35,7 +35,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 	private final static String MIME_TYPES_FILE = "mime_types.txt";
 	
 	// Nombre max. de de connexions simultanées
-	private final static int MAX_CONNECTIONS = 2;
+	private final static int MAX_CONNECTIONS = 4;
 	
 	// Nombre max. de connexions en attente dans la file 
 	private final static int BACKLOG = 10;
@@ -208,7 +208,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 		
 		String resourcePath = request.getHeader().getPath();
 		
-		// Intercepte une requête pour la ressource "/paramecho" 
+		// Intercepte une requête pour la ressource virtuelle "/paramecho" 
 		if (resourcePath.equals("/paramecho"))
 		{
 			evt.cancel = true;
@@ -231,7 +231,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 			response.setContent(content, Charset.forName("UTF-8"));
 
 		}
-		// Intercepte une requête pour la ressource "/admin" 
+		// Intercepte une requête pour la ressource virtuelle "/admin" 
 		else if (resourcePath.equals("/admin"))
 		{
 			evt.cancel = true;
@@ -255,8 +255,6 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 			{
 				this.stop();
 			}
-			
-//			try { Thread.sleep(500); } catch (InterruptedException unused) {}
 		}
 	}
 }
