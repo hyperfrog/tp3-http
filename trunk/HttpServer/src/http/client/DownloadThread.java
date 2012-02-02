@@ -211,7 +211,7 @@ public class DownloadThread implements Runnable
 								this.setCurrentState(DownloadState.FORBIDDEN);
 								retry = false;
 							}
-							// Si on reçoit un code 501, on demande un protocol non implémenté
+							// Si on reçoit un code 501, on demande un protocole non implémenté
 							else if (responseHeader.getStatusCode() == 501)
 							{
 								this.setCurrentState(DownloadState.ERROR);
@@ -301,7 +301,7 @@ public class DownloadThread implements Runnable
 					retry = false;
 				}
 				
-				// Si il y a eu une erreur lors de l'envoi de la requête on réessait d'envoyer la requête
+				// S'il y a eu une erreur lors de l'envoi de la requête, on essaie de nouveau
 				if (retry)
 				{
 					this.connectionAttempt++;
@@ -419,7 +419,12 @@ public class DownloadThread implements Runnable
 	 */
 	public static String byteToStringRepresentation(long bytes)
 	{
-		int unit = 1024;
+		final int unit = 1024;
+		
+		if (bytes == 0)
+		{
+			return "0";
+		}
 		
 		if (bytes < unit)
 		{
@@ -430,6 +435,6 @@ public class DownloadThread implements Runnable
 		
 		char prefix = "KMGTPE".charAt(exp - 1);
 		
-		return String.format("%.1f %sB", bytes / Math.pow(unit, exp), prefix);
+		return String.format("%.1f %so", bytes / Math.pow(unit, exp), prefix);
 	}
 }

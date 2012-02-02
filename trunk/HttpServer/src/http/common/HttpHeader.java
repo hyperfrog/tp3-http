@@ -99,7 +99,7 @@ public abstract class HttpHeader
 	public abstract void parse() throws BadHeaderException;
 	
 	/**
-	 * Fabrique une entête HTTP pour la requête ou la réponse à envoyer.
+	 * Fabrique un entête HTTP pour la requête ou la réponse à envoyer.
 	 */
 	public abstract void make() throws BadHeaderException;
 	

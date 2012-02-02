@@ -79,7 +79,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 		this.ipAddress = ipAddress;
 		this.portNum = portNum;
 		
-		// Lecture du fichiers des types MIME à la première instanciation de la classe
+		// Lecture du fichier des types MIME à la première instanciation de la classe
 		if (Dispatcher.mimeTypes == null)
 		{
 			Dispatcher.mimeTypes = new HashMap<String, String>();
@@ -116,7 +116,7 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 		this.runThread = null;
 		if (tmpRunThread != null)
 		{
-			tmpRunThread.interrupt();
+//			tmpRunThread.interrupt();
 		}
 	}
 	
@@ -208,8 +208,13 @@ public class Dispatcher implements RequestEventProcessor, Runnable
 		
 		String resourcePath = request.getHeader().getPath();
 		
+		// Intercepte une requête pour la ressource virtuelle "/" 
+		if (resourcePath.equals("/"))
+		{
+			request.getHeader().setFullPath("/index.htm");
+		}
 		// Intercepte une requête pour la ressource virtuelle "/paramecho" 
-		if (resourcePath.equals("/paramecho"))
+		else if (resourcePath.equals("/paramecho"))
 		{
 			evt.cancel = true;
 

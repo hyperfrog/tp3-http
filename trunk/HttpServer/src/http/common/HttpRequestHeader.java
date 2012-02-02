@@ -19,7 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * La classe HttpResponseHeader modélise une entête HTTP de requête. 
+ * La classe HttpResponseHeader modélise un entête HTTP de requête. 
  * 
  * @author Christian Lesage
  * @author Alexandre Tremblay
@@ -101,27 +101,10 @@ public class HttpRequestHeader extends HttpHeader
 			if (mFullRequest.find()) 
 			{
 				this.method = mFullRequest.group(1);
-				this.fullPath = mFullRequest.group(2);
 				this.protocol = mFullRequest.group(3);
 
-				ArrayList<String> fullPathParts = split(this.fullPath, "?");
-
-				byte[] pathBytes = unescape(fullPathParts.get(0));
-
-				if (!isAscii(pathBytes) && isValidUtf8(pathBytes))
-				{
-					this.path = bytesToString(pathBytes, "UTF-8");
-				}
-				else
-				{
-					this.path = bytesToString(pathBytes, DEFAULT_URL_ENCODING);
-				}
-
-				if (fullPathParts.size() > 1)
-				{
-					this.parseGetParams(fullPathParts.get(1));
-				}
-
+				this.setFullPath(mFullRequest.group(2));
+				
 				if (headerLines.size() > 1)
 				{
 					this.parseFields(headerLines.subList(1, headerLines.size()));
@@ -144,7 +127,30 @@ public class HttpRequestHeader extends HttpHeader
 		
 	}
 	
-	// Parse les champs du header
+	// Analyse le chemin complet de la ressource
+	private void parseFullPath()
+	{
+		ArrayList<String> fullPathParts = split(this.fullPath, "?");
+
+		byte[] pathBytes = unescape(fullPathParts.get(0));
+
+		if (!isAscii(pathBytes) && isValidUtf8(pathBytes))
+		{
+			this.path = bytesToString(pathBytes, "UTF-8");
+		}
+		else
+		{
+			this.path = bytesToString(pathBytes, DEFAULT_URL_ENCODING);
+		}
+
+		if (fullPathParts.size() > 1)
+		{
+			this.parseGetParams(fullPathParts.get(1));
+		}
+		
+	}
+	
+	// Analyse les champs de l'en-tête
 	@Override
 	protected void parseFields(List<String> fieldLines)
 	{
@@ -161,7 +167,7 @@ public class HttpRequestHeader extends HttpHeader
 		}
 	}
 
-	// Parse les paramètres GET de la requête
+	// Analyse les paramètres GET de la requête
 	protected void parseGetParams(String params)
 	{
 		ArrayList<String> paramList = split(params, "&");
@@ -259,6 +265,7 @@ public class HttpRequestHeader extends HttpHeader
 	public void setFullPath(String fullPath)
 	{
 		this.fullPath = fullPath;
+		this.parseFullPath();
 	}
 
 	/**

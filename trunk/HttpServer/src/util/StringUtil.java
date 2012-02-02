@@ -95,7 +95,7 @@ public class StringUtil
 	}
 	
 	/**
-	 * Convertit un dictionnaire de <String, String> en chaîne de caractères.
+	 * Convertit un dictionnaire en chaîne de caractères.
 	 * 
 	 * @param in le dictionnaire à convertir 
 	 * @param entrySep la séquence séparant les entrées du dictionnaire
