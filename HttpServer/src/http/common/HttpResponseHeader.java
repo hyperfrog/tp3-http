@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 import util.DateUtil;
 
 /**
- * La classe HttpResponseHeader modélise une entête HTTP de réponse. 
+ * La classe HttpResponseHeader modélise un entête HTTP de réponse. 
  * 
  * @author Christian Lesage
  * @author Alexandre Tremblay

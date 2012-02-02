@@ -39,28 +39,28 @@ public class ServerApp
 		InputStream is = null;
 		try
 		{
-			// Lit le fichier de configuration spécifié dans la ligne de commange
+			// Lit le fichier de configuration spécifié dans la ligne de commande
 			is = new FileInputStream((args.length > 0) ? args[0] : "");
-			System.out.println("Utilisation du fichier de configuation \"" + args[0] + "\" spécifié dans la ligne de commande.");
+			System.out.println("Utilisation du fichier de configuration \"" + args[0] + "\" spécifié dans la ligne de commande.");
 		}
 		catch (FileNotFoundException e)
 		{
 			if (args.length > 0)
 			{
-				System.out.println("Impossible de trouver le fichier de configuation \"" + args[0] + "\" spécifié dans la ligne de commande.");
+				System.out.println("Impossible de trouver le fichier de configuration \"" + args[0] + "\" spécifié dans la ligne de commande.");
 			}
 			try
 			{
 				// Lit le fichier de configuration se trouvant dans le répertoire courant
 				is = new FileInputStream(userDir + fileSeparator + ServerApp.DEFAULT_CONFIG_FILE);
-				System.out.println("Utilisation du fichier de configuation \"" + ServerApp.DEFAULT_CONFIG_FILE + "\" trouvé dans \"" + userDir + "\".");
+				System.out.println("Utilisation du fichier de configuration \"" + ServerApp.DEFAULT_CONFIG_FILE + "\" trouvé dans \"" + userDir + "\".");
 			}
 			catch (FileNotFoundException e2)
 			{
 				// Lit le fichier de configuration interne
-				System.out.println("Impossible de trouver un fichier de configuation nommé \"" + ServerApp.DEFAULT_CONFIG_FILE + "\" dans \"" + userDir + "\".");
+				System.out.println("Impossible de trouver un fichier de configuration nommé \"" + ServerApp.DEFAULT_CONFIG_FILE + "\" dans \"" + userDir + "\".");
 				is = ServerApp.class.getResourceAsStream("cfg/" + ServerApp.DEFAULT_CONFIG_FILE);
-				System.out.println("Utilisation de la configuation par défaut.");
+				System.out.println("Utilisation de la configuration par défaut.");
 			}
 		}
 		
